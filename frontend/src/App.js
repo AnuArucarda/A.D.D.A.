@@ -111,6 +111,232 @@ const DistroCard = ({ distro, info, selected, onSelect }) => (
   </motion.div>
 );
 
+// ======================= APP COMPILER MODAL =======================
+
+const AppCompilerModal = ({ show, onClose }) => {
+  const [platforms, setPlatforms] = useState({});
+  const [aiProviders, setAiProviders] = useState({});
+  const [selectedPlatform, setSelectedPlatform] = useState("linux_appimage");
+  const [selectedProvider, setSelectedProvider] = useState("emergent");
+  const [selectedModel, setSelectedModel] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const [compiling, setCompiling] = useState(false);
+  const [result, setResult] = useState(null);
+
+  useEffect(() => {
+    if (show) {
+      fetchPlatforms();
+    }
+  }, [show]);
+
+  const fetchPlatforms = async () => {
+    try {
+      const res = await axios.get(`${API}/compiler/platforms`);
+      setPlatforms(res.data.platforms);
+      setAiProviders(res.data.ai_providers);
+      if (res.data.ai_providers.emergent) {
+        setSelectedModel(res.data.ai_providers.emergent.models[0]);
+      }
+    } catch (e) {
+      toast.error("Failed to fetch platforms");
+    }
+  };
+
+  const handleProviderChange = (provider) => {
+    setSelectedProvider(provider);
+    if (aiProviders[provider]?.models?.length > 0) {
+      setSelectedModel(aiProviders[provider].models[0]);
+    }
+  };
+
+  const compileApp = async () => {
+    setCompiling(true);
+    setResult(null);
+    try {
+      const res = await axios.post(`${API}/compiler/compile`, {
+        platform: selectedPlatform,
+        ai_config: {
+          provider: selectedProvider,
+          model: selectedModel,
+          api_key: selectedProvider !== "emergent" && !aiProviders[selectedProvider]?.local ? apiKey : undefined
+        }
+      });
+      setResult(res.data);
+      toast.success("App compiled successfully!");
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Compilation failed");
+    } finally {
+      setCompiling(false);
+    }
+  };
+
+  if (!show) return null;
+
+  const currentProvider = aiProviders[selectedProvider] || {};
+  const currentPlatform = platforms[selectedPlatform] || {};
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={onClose}>
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+        onClick={(e) => e.stopPropagation()}
+        className="glass-card rounded-2xl p-6 max-w-4xl w-full mx-4 max-h-[85vh] overflow-y-auto">
+        
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+            <Download className="w-7 h-7 text-[#E95420]" />
+            Compile Local App
+          </h2>
+          <button onClick={onClose} className="text-white/50 hover:text-white">
+            <XCircle className="w-6 h-6" />
+          </button>
+        </div>
+
+        <p className="text-sm text-white/60 mb-6">
+          Convert this web app into a standalone desktop or mobile application that runs completely on your machine. Choose your platform, configure AI provider, and download!
+        </p>
+
+        {/* Platform Selection */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+            <Monitor className="w-5 h-5 text-[#E95420]" /> Select Platform
+          </h3>
+          <div className="grid grid-cols-2 gap-3">
+            {Object.entries(platforms).map(([key, info]) => (
+              <motion.div key={key} whileHover={{ scale: 1.02 }}
+                onClick={() => setSelectedPlatform(key)}
+                className={`p-4 rounded-xl cursor-pointer transition-all ${
+                  selectedPlatform === key ? "bg-[#E95420]/20 border-2 border-[#E95420]/50" : "bg-black/30 border border-white/5"
+                }`}>
+                <div className="flex items-center gap-2 mb-2">
+                  {key.includes('android') ? <Smartphone className="w-5 h-5 text-[#3DDC84]" /> : <Monitor className="w-5 h-5 text-blue-400" />}
+                  <span className="font-semibold text-white text-sm">{info.name}</span>
+                </div>
+                <p className="text-xs text-white/50">{info.description}</p>
+                <Badge variant="neutral" className="mt-2 text-[9px]">{info.format}</Badge>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+
+        {/* AI Provider Configuration */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+            <Bot className="w-5 h-5 text-[#E95420]" /> AI Provider Configuration
+          </h3>
+          
+          <div className="space-y-4">
+            {/* Provider Selection */}
+            <div>
+              <label className="text-xs text-white/50 mb-2 block">AI Provider</label>
+              <div className="grid grid-cols-3 gap-2">
+                {Object.entries(aiProviders).map(([key, info]) => (
+                  <button key={key} onClick={() => handleProviderChange(key)}
+                    className={`p-3 rounded-lg text-left ${selectedProvider === key ? "bg-[#E95420]/20 border border-[#E95420]/50" : "bg-black/20 border border-white/5"}`}>
+                    <div className="font-medium text-sm text-white">{info.name}</div>
+                    {info.built_in && <Badge variant="success" className="mt-1 text-[9px]">Built-in</Badge>}
+                    {info.local && <Badge variant="neutral" className="mt-1 text-[9px]">Local</Badge>}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Model Selection */}
+            {currentProvider.models && (
+              <div>
+                <label className="text-xs text-white/50 mb-2 block">Model</label>
+                <select value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)}
+                  className="input-dark w-full">
+                  {currentProvider.models.map(model => (
+                    <option key={model} value={model}>{model}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* API Key (if needed) */}
+            {currentProvider.requires_key && !currentProvider.built_in && (
+              <div>
+                <label className="text-xs text-white/50 mb-2 block flex items-center gap-2">
+                  API Key <Lock className="w-3 h-3" />
+                </label>
+                <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="Enter your API key" className="input-dark w-full" />
+                <p className="text-xs text-white/40 mt-1">
+                  Your key is only stored in the compiled app, never sent to our servers
+                </p>
+              </div>
+            )}
+
+            {selectedProvider === "emergent" && (
+              <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                <p className="text-sm text-green-300 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" />
+                  Using Emergent LLM - No API key needed! Works out of the box.
+                </p>
+              </div>
+            )}
+
+            {currentProvider.local && (
+              <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                <p className="text-sm text-blue-300">
+                  <Info className="w-4 h-4 inline mr-1" />
+                  Local AI - Runs on your machine. Install {currentProvider.name} separately.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Compile Button */}
+        <button onClick={compileApp} disabled={compiling || (currentProvider.requires_key && !apiKey && !currentProvider.built_in)}
+          className="w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2 bg-[#E95420] text-white hover:bg-[#E95420]/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+          {compiling ? (
+            <><Loader2 className="w-5 h-5 animate-spin" /> Compiling...</>
+          ) : (
+            <><Rocket className="w-5 h-5" /> Compile {currentPlatform.name}</>
+          )}
+        </button>
+
+        {/* Result */}
+        {result && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            className="mt-6 p-4 bg-green-500/10 border border-green-500/30 rounded-xl">
+            <div className="flex items-center gap-2 mb-3">
+              <CheckCheck className="w-5 h-5 text-green-400" />
+              <span className="font-semibold text-green-300">Compilation Successful!</span>
+            </div>
+            <p className="text-sm text-white/70 mb-3">{result.message}</p>
+            <div className="flex gap-2">
+              <a href={`${API}/compiler/downloads/${result.package_path?.split('/').pop()?.replace('.zip', '')}`}
+                className="btn-primary flex items-center gap-2">
+                <Download className="w-4 h-4" /> Download Package
+              </a>
+            </div>
+            <p className="text-xs text-white/40 mt-3">
+              Platform: {result.platform} • AI: {result.ai_provider}
+            </p>
+          </motion.div>
+        )}
+
+        {/* Info Box */}
+        <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
+          <p className="text-sm text-blue-300 mb-2">
+            <Info className="w-4 h-4 inline mr-1" />
+            <strong>What you'll get:</strong>
+          </p>
+          <ul className="text-xs text-white/60 space-y-1 ml-5">
+            <li>• Standalone app with embedded backend + frontend</li>
+            <li>• All features work offline (except AI API calls)</li>
+            <li>• Binary auto-installer included</li>
+            <li>• README with installation instructions</li>
+            <li>• No web server needed - runs entirely on your machine</li>
+          </ul>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
 // ======================= BINARY MANAGER MODAL =======================
 
 const BinaryManagerModal = ({ show, onClose }) => {
@@ -1086,6 +1312,7 @@ const Dashboard = () => {
   const [bottomPanel, setBottomPanel] = useState("terminal");
   const [sessionId] = useState(() => `session-${Date.now()}`);
   const [showBinaryManager, setShowBinaryManager] = useState(false);
+  const [showAppCompiler, setShowAppCompiler] = useState(false);
 
   useEffect(() => {
     fetchDevices();
@@ -1152,6 +1379,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen flex flex-col" data-testid="dashboard">
       <BinaryManagerModal show={showBinaryManager} onClose={() => setShowBinaryManager(false)} />
+      <AppCompilerModal show={showAppCompiler} onClose={() => setShowAppCompiler(false)} />
       
       <header className="px-6 py-4 border-b border-white/5 bg-gradient-to-r from-[#2C001E]/50 to-transparent">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -1164,6 +1392,9 @@ const Dashboard = () => {
             <ToolTab icon={Layers} label="Halium" active={activeTool === "halium"} onClick={() => setActiveTool("halium")} />
           </div>
           <div className="flex items-center gap-2">
+            <button onClick={() => setShowAppCompiler(!showAppCompiler)} className="btn-primary text-sm">
+              <Download className="w-4 h-4 mr-2" /> Get Local App
+            </button>
             <button onClick={() => setShowBinaryManager(!showBinaryManager)} className="btn-outline text-sm">
               <Settings className="w-4 h-4 mr-2" /> Binaries
             </button>
