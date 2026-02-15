@@ -26,6 +26,7 @@ load_dotenv(ROOT_DIR / '.env')
 # Import our new modules
 from binary_manager import binary_manager, BINARY_SOURCES
 from build_orchestrator import build_orchestrator
+from app_compiler import app_compiler
 
 # MongoDB connection
 mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
@@ -2011,16 +2012,43 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
 
 # ======================= LOCAL APP COMPILATION =======================
 
-@api_router.post("/export/local-app")
-async def export_local_app(request: dict):
-    """Generate a local app package for the user's OS"""
-    target_os = request.get("os", platform.system().lower())
-    
+@api_router.get("/compiler/platforms")
+async def get_supported_platforms():
+    """Get all supported compilation platforms"""
     return {
-        "success": True,
-        "message": f"Local app export for {target_os} is under development",
-        "instructions": "For now, you can run the app locally by cloning the repository and using Docker or running backend/frontend separately"
+        "platforms": app_compiler.supported_platforms,
+        "ai_providers": app_compiler.ai_providers
     }
+
+@api_router.post("/compiler/compile")
+async def compile_local_app(request: dict):
+    """Compile the app for a specific platform with AI configuration"""
+    platform_type = request.get("platform")
+    ai_config = request.get("ai_config", {})
+    
+    if not platform_type:
+        raise HTTPException(status_code=400, detail="platform required")
+    
+    result = await app_compiler.compile_app(platform_type, ai_config)
+    
+    if not result["success"]:
+        raise HTTPException(status_code=500, detail=result["message"])
+    
+    return result
+
+@api_router.get("/compiler/downloads/{package_name}")
+async def download_compiled_app(package_name: str):
+    """Download a compiled app package"""
+    package_path = WORK_DIR / "app_exports" / f"{package_name}.zip"
+    
+    if not package_path.exists():
+        raise HTTPException(status_code=404, detail="Package not found")
+    
+    return FileResponse(
+        package_path,
+        media_type="application/zip",
+        filename=f"{package_name}.zip"
+    )
 
 # ======================= APP SETUP =======================
 
