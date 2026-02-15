@@ -29,6 +29,9 @@ from build_orchestrator import build_orchestrator
 from app_compiler import app_compiler
 from ai_build_assistant import ai_build_assistant
 from build_presets import get_presets_for_tool, apply_preset_to_project
+from ai_provider_manager import ai_provider_manager
+from device_manager import device_manager
+from build_history_manager import BuildHistoryManager
 
 # MongoDB connection
 mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
