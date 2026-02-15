@@ -342,8 +342,97 @@ class AndroidBuildProject(BaseModel):
     build_dir: Optional[str] = None
     output_files: List[str] = []
     
+    # Recipe/Export
+    saved_as_recipe: bool = False
+    recipe_name: Optional[str] = None
+    recipe_description: Optional[str] = None
+    export_package_path: Optional[str] = None
+    
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class BuildRecipe(BaseModel):
+    """Saved build configuration that can be reused or shared"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: Optional[str] = None
+    author: Optional[str] = None
+    
+    # Target info
+    device_codename: str
+    device_model: Optional[str] = None
+    architecture: str = "arm64"
+    
+    # Build type
+    build_type: str  # kernel, os, android, halium
+    
+    # Configuration (varies by build type)
+    config: Dict[str, Any] = {}
+    
+    # For Android builds
+    interview_depth: Optional[str] = None
+    interview_answers: Optional[Dict[str, Any]] = None
+    base_rom: Optional[str] = None
+    android_version: Optional[str] = None
+    gapps_type: Optional[str] = None
+    root_solution: Optional[str] = None
+    kernel_type: Optional[str] = None
+    
+    # For Kernel builds
+    kernel_source: Optional[str] = None
+    defconfig: Optional[str] = None
+    kernel_version: Optional[str] = None
+    config_patches: List[str] = []
+    
+    # For OS builds
+    distro: Optional[str] = None
+    distro_version: Optional[str] = None
+    packages: List[str] = []
+    
+    # For Halium builds
+    halium_version: Optional[str] = None
+    
+    # Metadata
+    tags: List[str] = []
+    downloads: int = 0
+    rating: float = 0.0
+    is_public: bool = False
+    
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class BuildExportPackage(BaseModel):
+    """Complete build export with images and scripts"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    project_id: str
+    project_type: str  # kernel, os, android, halium
+    
+    # Package info
+    name: str
+    device_codename: str
+    description: Optional[str] = None
+    
+    # Contents
+    images: List[str] = []  # boot.img, system.img, etc.
+    scripts: List[str] = []  # build scripts
+    configs: List[str] = []  # configuration files
+    manifests: List[str] = []  # repo manifests
+    patches: List[str] = []  # applied patches
+    
+    # Package file
+    package_path: Optional[str] = None
+    package_size: Optional[int] = None
+    checksum: Optional[str] = None
+    
+    # Build info for reproducibility
+    build_host: Optional[str] = None
+    build_date: Optional[str] = None
+    build_commands: List[str] = []
+    environment_vars: Dict[str, str] = {}
+    
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class AndroidInterviewMessage(BaseModel):
     project_id: str
