@@ -1,0 +1,307 @@
+{
+  "timestamp": "2026-02-15T03:29:53.788403",
+  "total_tests": 24,
+  "passed_tests": 22,
+  "success_rate": 91.66666666666666,
+  "results": [
+    {
+      "test": "Health Check",
+      "status": "\u2705 PASS",
+      "success": true,
+      "details": "Status: 200",
+      "response_data": {
+        "status": "healthy",
+        "tools": {
+          "adb": false,
+          "fastboot": false
+        },
+        "timestamp": "2026-02-15T03:29:44.505116+00:00"
+      }
+    },
+    {
+      "test": "ADB Tool Available",
+      "status": "\u274c FAIL",
+      "success": false,
+      "details": "ADB: Not Available",
+      "response_data": null
+    },
+    {
+      "test": "Fastboot Tool Available",
+      "status": "\u274c FAIL",
+      "success": false,
+      "details": "Fastboot: Not Available",
+      "response_data": null
+    },
+    {
+      "test": "Get Halium Versions",
+      "status": "\u2705 PASS",
+      "success": true,
+      "details": "Status: 200",
+      "response_data": {
+        "versions": [
+          {
+            "id": "halium-7.1",
+            "name": "Halium 7.1",
+            "android_base": "7.1 Nougat",
+            "status": "stable"
+          },
+          {
+            "id": "halium-9.0",
+            "name": "Halium 9.0",
+            "android_base": "9.0 Pie",
+            "status": "stable"
+          },
+          {
+            "id": "halium-10.0",
+            "name": "Halium 10.0",
+            "android_base": "10 Q",
+            "status": "stable"
+          },
+          {
+            "id": "halium-11.0",
+            "name": "Halium 11.0",
+            "android_base": "11 R",
+            "status": "latest"
+          }
+        ]
+      }
+    },
+    {
+      "test": "Contains Expected Versions",
+      "status": "\u2705 PASS",
+      "success": true,
+      "details": "Found 4 versions: ['halium-7.1', 'halium-9.0', 'halium-10.0', 'halium-11.0']",
+      "response_data": null
+    },
+    {
+      "test": "Version Fields Complete",
+      "status": "\u2705 PASS",
+      "success": true,
+      "details": "Fields: ['id', 'name', 'android_base', 'status']",
+      "response_data": null
+    },
+    {
+      "test": "Get Build Steps",
+      "status": "\u2705 PASS",
+      "success": true,
+      "details": "Status: 200",
+      "response_data": {
+        "steps": [
+          {
+            "id": 1,
+            "name": "Environment Setup",
+            "description": "Install build dependencies and configure environment"
+          },
+          {
+            "id": 2,
+            "name": "Repo Init",
+            "description": "Initialize Halium manifest repository"
+          },
+          {
+            "id": 3,
+            "name": "Device Tree",
+            "description": "Set up device-specific repositories"
+          },
+          {
+            "id": 4,
+            "name": "Kernel Config",
+            "description": "Configure kernel for Halium compatibility"
+          },
+          {
+            "id": 5,
+            "name": "Vendor Blobs",
+            "description": "Extract or download vendor proprietary files"
+          },
+          {
+            "id": 6,
+            "name": "Build System",
+            "description": "Compile the Halium system image"
+          },
+          {
+            "id": 7,
+            "name": "Build Kernel",
+            "description": "Compile the Linux kernel"
+          },
+          {
+            "id": 8,
+            "name": "Generate Rootfs",
+            "description": "Create the Linux root filesystem"
+          },
+          {
+            "id": 9,
+            "name": "Flash & Test",
+            "description": "Flash images to device and verify boot"
+          }
+        ]
+      }
+    },
+    {
+      "test": "Build Steps Retrieved",
+      "status": "\u2705 PASS",
+      "success": true,
+      "details": "Found 9 build steps",
+      "response_data": null
+    },
+    {
+      "test": "Contains Expected Steps",
+      "status": "\u2705 PASS",
+      "success": true,
+      "details": "Steps: ['Environment Setup', 'Repo Init', 'Device Tree']...",
+      "response_data": null
+    },
+    {
+      "test": "List Devices",
+      "status": "\u2705 PASS",
+      "success": true,
+      "details": "Status: 200",
+      "response_data": {
+        "devices": [],
+        "error": "/bin/sh: 1: adb: not found\n",
+        "adb_available": false
+      }
+    },
+    {
+      "test": "Devices Endpoint Working",
+      "status": "\u2705 PASS",
+      "success": true,
+      "details": "Found 0 devices, ADB: False",
+      "response_data": null
+    },
+    {
+      "test": "Returns Device List",
+      "status": "\u2705 PASS",
+      "success": true,
+      "details": "Device list type: <class 'list'>",
+      "response_data": null
+    },
+    {
+      "test": "Execute Echo Command",
+      "status": "\u2705 PASS",
+      "success": true,
+      "details": "Status: 200",
+      "response_data": {
+        "command": "echo 'Hello Halium Test'",
+        "stdout": "Hello Halium Test\n",
+        "stderr": "",
+        "exit_code": 0,
+        "success": true
+      }
+    },
+    {
+      "test": "Terminal Response Complete",
+      "status": "\u2705 PASS",
+      "success": true,
+      "details": "Fields: stdout=True, exit_code=True, success=True",
+      "response_data": null
+    },
+    {
+      "test": "Command Executed Successfully",
+      "status": "\u2705 PASS",
+      "success": true,
+      "details": "Exit code: 0",
+      "response_data": null
+    },
+    {
+      "test": "Get Command History",
+      "status": "\u2705 PASS",
+      "success": true,
+      "details": "Status: 200",
+      "response_data": {
+        "history": [
+          {
+            "id": "ac3dcec7-109d-43c8-bc9c-ac01ca2c3f0a",
+            "command": "echo 'Hello Halium Test'",
+            "stdout": "Hello Halium Test\n",
+            "stderr": "",
+            "exit_code": 0,
+            "session_id": "test-session-1771126184",
+            "timestamp": "2026-02-15T03:29:45.641266+00:00"
+          }
+        ]
+      }
+    },
+    {
+      "test": "Command History Available",
+      "status": "\u2705 PASS",
+      "success": true,
+      "details": "History entries: 1",
+      "response_data": null
+    },
+    {
+      "test": "Send AI Chat Message",
+      "status": "\u2705 PASS",
+      "success": true,
+      "details": "Status: 200",
+      "response_data": {
+        "response": "# Hello! Welcome to Halium Build Assistant \ud83d\ude80\n\nYes, I'd be happy to help you with Halium porting! I can assist you with:\n\n## What I Can Help With:\n\n**Device Analysis**\n- Check device compatibility via ADB/Fastboot\n- Identify device codename, SoC, and Android version\n- Find existing device trees and kernel sources\n\n**Build Setup**\n- Guide you through repo initialization\n- Set up device tree and kernel source\n- Configure build environment\n\n**Troubleshooting**\n- Debug build errors\n- Kernel configuration issues\n- Boot problems and logs analysis\n\n**Process Guidance**\n- Step-by-step Halium porting workflow\n- Rootfs creation and flashing\n- Testing and debugging\n\n## To Get Started:\n\n**Option 1: Analyze Your Device**\nIf you have an Android device connected, I can check its specifications and compatibility.\n\n**Option 2: Existing Project**\nIf you already have a device in mind or have started porting, tell me what you need help with.\n\n**Option 3: Learn the Process**\nI can explain the Halium porting workflow from start to finish.\n\nWhat would you like to do? Do you have a device connected, or would you like to learn about the process first?",
+        "extracted_commands": [],
+        "session_id": "test-session-1771126184"
+      }
+    },
+    {
+      "test": "AI Response Complete",
+      "status": "\u2705 PASS",
+      "success": true,
+      "details": "Response length: 1143",
+      "response_data": null
+    },
+    {
+      "test": "AI Commands Extraction",
+      "status": "\u2705 PASS",
+      "success": true,
+      "details": "Commands extracted: 0",
+      "response_data": null
+    },
+    {
+      "test": "Get Chat History",
+      "status": "\u2705 PASS",
+      "success": true,
+      "details": "Status: 200",
+      "response_data": {
+        "messages": [
+          {
+            "id": "866898d6-231f-4705-8fb3-04ca033ce463",
+            "session_id": "test-session-1771126184",
+            "role": "user",
+            "content": "Hello, can you help with Halium porting?",
+            "timestamp": "2026-02-15T03:29:53.391506+00:00"
+          },
+          {
+            "id": "df20b23e-79a5-4807-9f4a-7f788d5e1254",
+            "session_id": "test-session-1771126184",
+            "role": "assistant",
+            "content": "# Hello! Welcome to Halium Build Assistant \ud83d\ude80\n\nYes, I'd be happy to help you with Halium porting! I can assist you with:\n\n## What I Can Help With:\n\n**Device Analysis**\n- Check device compatibility via ADB/Fastboot\n- Identify device codename, SoC, and Android version\n- Find existing device trees and kernel sources\n\n**Build Setup**\n- Guide you through repo initialization\n- Set up device tree and kernel source\n- Configure build environment\n\n**Troubleshooting**\n- Debug build errors\n- Kernel configuration issues\n- Boot problems and logs analysis\n\n**Process Guidance**\n- Step-by-step Halium porting workflow\n- Rootfs creation and flashing\n- Testing and debugging\n\n## To Get Started:\n\n**Option 1: Analyze Your Device**\nIf you have an Android device connected, I can check its specifications and compatibility.\n\n**Option 2: Existing Project**\nIf you already have a device in mind or have started porting, tell me what you need help with.\n\n**Option 3: Learn the Process**\nI can explain the Halium porting workflow from start to finish.\n\nWhat would you like to do? Do you have a device connected, or would you like to learn about the process first?",
+            "extracted_commands": [],
+            "timestamp": "2026-02-15T03:29:53.393105+00:00"
+          }
+        ]
+      }
+    },
+    {
+      "test": "Chat History Available",
+      "status": "\u2705 PASS",
+      "success": true,
+      "details": "Chat messages: 2",
+      "response_data": null
+    },
+    {
+      "test": "List Fastboot Devices",
+      "status": "\u2705 PASS",
+      "success": true,
+      "details": "Status: 200",
+      "response_data": {
+        "devices": [],
+        "fastboot_available": false
+      }
+    },
+    {
+      "test": "List Build Sessions",
+      "status": "\u2705 PASS",
+      "success": true,
+      "details": "Status: 200",
+      "response_data": {
+        "sessions": []
+      }
+    }
+  ]
+}
