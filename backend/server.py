@@ -38,6 +38,9 @@ mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ.get('DB_NAME', 'linux_device_forge')]
 
+# Initialize managers
+build_history = BuildHistoryManager(db)
+
 # Claude AI integration
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 
