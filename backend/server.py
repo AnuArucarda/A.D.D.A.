@@ -185,6 +185,155 @@ INTERVIEW_DEPTHS = {
     }
 }
 
+# Root Solutions for Android/Kernel builds
+ROOT_SOLUTIONS = {
+    "none": {
+        "name": "No Root",
+        "description": "Standard Android without root access",
+        "kernel_patch": False
+    },
+    "magisk": {
+        "name": "Magisk",
+        "description": "Systemless root with module support, SafetyNet bypass",
+        "kernel_patch": False,
+        "install_method": "boot_patch",
+        "repo": "https://github.com/topjohnwu/Magisk"
+    },
+    "magisk_delta": {
+        "name": "Magisk Delta",
+        "description": "Magisk fork with additional hiding features",
+        "kernel_patch": False,
+        "install_method": "boot_patch",
+        "repo": "https://github.com/HuskyDG/magisk-files"
+    },
+    "kernelsu": {
+        "name": "KernelSU",
+        "description": "Kernel-based root, better hiding, module support",
+        "kernel_patch": True,
+        "install_method": "kernel_patch",
+        "repo": "https://github.com/tiann/KernelSU",
+        "kernel_configs": [
+            "CONFIG_KPROBES=y",
+            "CONFIG_HAVE_KPROBES=y",
+            "CONFIG_KPROBE_EVENTS=y"
+        ]
+    },
+    "kernelsu_next": {
+        "name": "KernelSU Next",
+        "description": "Next-gen KernelSU with improved compatibility",
+        "kernel_patch": True,
+        "install_method": "kernel_patch",
+        "repo": "https://github.com/rifsxd/KernelSU-Next",
+        "kernel_configs": [
+            "CONFIG_KPROBES=y",
+            "CONFIG_HAVE_KPROBES=y",
+            "CONFIG_KPROBE_EVENTS=y"
+        ]
+    },
+    "apatch": {
+        "name": "APatch",
+        "description": "Android kernel patch root solution",
+        "kernel_patch": True,
+        "install_method": "kernel_patch",
+        "repo": "https://github.com/bmax121/APatch"
+    },
+    "supersu": {
+        "name": "SuperSU",
+        "description": "Legacy root solution (deprecated)",
+        "kernel_patch": False,
+        "install_method": "system_install"
+    }
+}
+
+# Custom Recovery options
+CUSTOM_RECOVERIES = {
+    "twrp": {
+        "name": "TWRP",
+        "full_name": "Team Win Recovery Project",
+        "description": "Most popular custom recovery with touch interface",
+        "repo": "https://github.com/TeamWin/android_bootable_recovery",
+        "manifest": "https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp",
+        "branches": ["twrp-12.1", "twrp-11", "twrp-10", "twrp-9.0"]
+    },
+    "orangefox": {
+        "name": "OrangeFox",
+        "full_name": "OrangeFox Recovery",
+        "description": "Feature-rich recovery based on TWRP with modern UI",
+        "repo": "https://gitlab.com/OrangeFox/Recovery",
+        "manifest": "https://gitlab.com/OrangeFox/sync",
+        "branches": ["fox_12.1", "fox_11.0", "fox_10.0"]
+    },
+    "pitchblack": {
+        "name": "PitchBlack",
+        "full_name": "PitchBlack Recovery Project",
+        "description": "Dark-themed TWRP-based recovery",
+        "repo": "https://github.com/PitchBlackRecoveryProject",
+        "manifest": "https://github.com/PitchBlackRecoveryProject/manifest_pb",
+        "branches": ["android-12.1", "android-11.0"]
+    },
+    "shrp": {
+        "name": "SHRP",
+        "full_name": "SkyHawk Recovery Project",
+        "description": "Modern recovery with unique features",
+        "repo": "https://github.com/nicklaspersson/android_bootable_recovery",
+        "manifest": "https://github.com/nicklaspersson/manifest",
+        "branches": ["android-12.1", "android-11.0"]
+    },
+    "pbrp": {
+        "name": "PBRP",
+        "full_name": "PitchBlack Recovery Project",
+        "description": "Feature-packed recovery with OTA support",
+        "repo": "https://github.com/nicklaspersson/recovery_manifest",
+        "branches": ["android-12.1"]
+    }
+}
+
+# Linux kernel capabilities/security features
+LINUX_KERNEL_SECURITY = {
+    "capabilities": {
+        "configs": [
+            "CONFIG_SECURITY=y",
+            "CONFIG_SECURITYFS=y",
+            "CONFIG_SECURITY_NETWORK=y",
+            "CONFIG_SECURITY_PATH=y"
+        ],
+        "description": "POSIX capabilities for fine-grained privileges"
+    },
+    "namespaces": {
+        "configs": [
+            "CONFIG_NAMESPACES=y",
+            "CONFIG_USER_NS=y",
+            "CONFIG_PID_NS=y",
+            "CONFIG_NET_NS=y",
+            "CONFIG_UTS_NS=y",
+            "CONFIG_IPC_NS=y"
+        ],
+        "description": "Namespace isolation for containers/sandboxing"
+    },
+    "selinux": {
+        "configs": [
+            "CONFIG_SECURITY_SELINUX=y",
+            "CONFIG_SECURITY_SELINUX_BOOTPARAM=y",
+            "CONFIG_SECURITY_SELINUX_DISABLE=y"
+        ],
+        "description": "SELinux mandatory access control"
+    },
+    "apparmor": {
+        "configs": [
+            "CONFIG_SECURITY_APPARMOR=y",
+            "CONFIG_SECURITY_APPARMOR_BOOTPARAM_VALUE=1"
+        ],
+        "description": "AppArmor application security"
+    },
+    "sudo_support": {
+        "configs": [
+            "CONFIG_AUDITSYSCALL=y",
+            "CONFIG_AUDIT=y"
+        ],
+        "description": "Audit support for sudo logging"
+    }
+}
+
 # Kernel versions
 MAINLINE_KERNELS = {
     "6.8": {"status": "mainline", "eol": False},
