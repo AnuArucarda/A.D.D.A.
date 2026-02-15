@@ -28,6 +28,7 @@ from binary_manager import binary_manager, BINARY_SOURCES
 from build_orchestrator import build_orchestrator
 from app_compiler import app_compiler
 from ai_build_assistant import ai_build_assistant
+from build_presets import get_presets_for_tool, apply_preset_to_project
 
 # MongoDB connection
 mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
@@ -2457,6 +2458,133 @@ async def download_compiled_app(package_name: str):
         media_type="application/zip",
         filename=f"{package_name}.zip"
     )
+
+# ======================= BUILD PRESETS & PREVIOUS BUILD ROUTES =======================
+
+@api_router.get("/presets/{tool_type}")
+async def get_build_presets(tool_type: str):
+    """Get quick build presets for a specific tool"""
+    presets = get_presets_for_tool(tool_type)
+    return {"presets": presets, "tool_type": tool_type}
+
+@api_router.post("/projects/clone")
+async def clone_previous_build(request: dict):
+    """Clone a previous build as a base for a new build"""
+    source_project_id = request.get("source_project_id")
+    project_type = request.get("project_type")
+    new_name = request.get("new_name")
+    preset_id = request.get("preset_id")  # Optional: apply preset on top
+    
+    if not source_project_id or not project_type:
+        raise HTTPException(status_code=400, detail="source_project_id and project_type required")
+    
+    # Get source project
+    collection_map = {
+        "kernel": db.kernel_projects,
+        "android": db.android_projects,
+        "os": db.os_image_projects,
+        "halium": db.halium_builds,
+        "recovery": db.recovery_builds
+    }
+    
+    collection = collection_map.get(project_type)
+    if not collection:
+        raise HTTPException(status_code=400, detail="Invalid project type")
+    
+    source_project = await collection.find_one({"id": source_project_id}, {"_id": 0})
+    if not source_project:
+        raise HTTPException(status_code=404, detail="Source project not found")
+    
+    # Clone project
+    cloned_project = source_project.copy()
+    cloned_project["id"] = str(uuid.uuid4())
+    cloned_project["name"] = new_name or f"{source_project.get('name', 'project')}-clone"
+    cloned_project["created_at"] = datetime.now(timezone.utc).isoformat()
+    cloned_project["cloned_from"] = source_project_id
+    cloned_project["build_status"] = "pending"
+    cloned_project["output_files"] = []
+    
+    # Apply preset if requested
+    if preset_id:
+        preset_config = apply_preset_to_project(preset_id, project_type, cloned_project)
+        cloned_project.update(preset_config)
+    
+    await collection.insert_one(cloned_project)
+    
+    return {
+        "success": True,
+        "cloned_project": cloned_project,
+        "preset_applied": preset_id is not None
+    }
+
+@api_router.post("/projects/quick-build")
+async def create_quick_build(request: dict):
+    """Create a project with quick build preset"""
+    tool_type = request.get("tool_type")
+    preset_id = request.get("preset_id")
+    device_info = request.get("device_info")
+    base_project_id = request.get("base_project_id")  # Optional: use previous build as base
+    
+    if not tool_type or not preset_id:
+        raise HTTPException(status_code=400, detail="tool_type and preset_id required")
+    
+    # Get preset
+    presets = get_presets_for_tool(tool_type)
+    preset = presets.get(preset_id)
+    if not preset:
+        raise HTTPException(status_code=400, detail="Invalid preset")
+    
+    # Load base project if specified
+    base_config = {}
+    if base_project_id:
+        collection_map = {
+            "kernel": db.kernel_projects,
+            "android": db.android_projects,
+            "os": db.os_image_projects,
+            "halium": db.halium_builds,
+            "recovery": db.recovery_builds
+        }
+        collection = collection_map.get(tool_type)
+        if collection:
+            base_project = await collection.find_one({"id": base_project_id}, {"_id": 0})
+            if base_project:
+                base_config = base_project
+    
+    # Apply preset
+    config = apply_preset_to_project(preset_id, tool_type, base_config)
+    
+    # Create project
+    device_codename = device_info.get("codename") or device_info.get("device") or "unknown"
+    
+    if tool_type == "kernel":
+        project = KernelProject(
+            name=f"kernel-{preset['name']}-{device_codename}",
+            device_codename=device_codename,
+            target_version=config.get("kernel_version"),
+            architecture=device_info.get("architecture", "arm64"),
+            build_status="ready",
+            **{k: v for k, v in config.items() if k in ["configs", "governor", "scheduler", "priority"]}
+        )
+        doc = project.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        doc['updated_at'] = doc['updated_at'].isoformat()
+        await db.kernel_projects.insert_one(doc)
+        return {"project": project, "preset": preset}
+    
+    elif tool_type == "os":
+        project = OSImageProject(
+            name=f"os-{preset['name']}-{device_codename}",
+            device_codename=device_codename,
+            distro=config.get("recommended_distro", "postmarketos"),
+            distro_type="mobile",
+            build_status="ready"
+        )
+        doc = project.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        await db.os_image_projects.insert_one(doc)
+        return {"project": project, "preset": preset}
+    
+    return {"error": "Project creation not implemented for this tool type yet"}
 
 # ======================= AI BUILD ASSISTANT ROUTES =======================
 
