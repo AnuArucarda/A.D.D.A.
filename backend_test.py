@@ -10,7 +10,7 @@ import sys
 from datetime import datetime
 
 # Use public endpoint from frontend/.env
-BACKEND_URL = "https://chat-persistence-1.preview.emergentagent.com"
+BACKEND_URL = "https://linux-on-android-1.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 class LinuxDeviceForgeAPITester:
