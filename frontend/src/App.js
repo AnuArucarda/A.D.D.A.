@@ -648,6 +648,143 @@ const AndroidBuilderPanel = ({ deviceInfo, sessionId }) => {
   );
 };
 
+// ======================= RECOVERY BUILDER PANEL =======================
+
+const RecoveryBuilderPanel = ({ deviceInfo }) => {
+  const [recoveries, setRecoveries] = useState({});
+  const [selectedRecovery, setSelectedRecovery] = useState("twrp");
+  const [builds, setBuilds] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [rootSolution, setRootSolution] = useState("none");
+  const [rootSolutions, setRootSolutions] = useState({});
+
+  useEffect(() => {
+    fetchRecoveryTypes();
+    fetchRootSolutions();
+    fetchBuilds();
+  }, []);
+
+  const fetchRecoveryTypes = async () => {
+    try {
+      const res = await axios.get(`${API}/recovery/types`);
+      setRecoveries(res.data.recoveries);
+    } catch (e) {}
+  };
+
+  const fetchRootSolutions = async () => {
+    try {
+      const res = await axios.get(`${API}/root/solutions`);
+      setRootSolutions(res.data.solutions);
+    } catch (e) {}
+  };
+
+  const fetchBuilds = async () => {
+    try {
+      const res = await axios.get(`${API}/recovery/builds`);
+      setBuilds(res.data.builds || []);
+    } catch (e) {}
+  };
+
+  const startBuild = async () => {
+    if (!deviceInfo?.codename && !deviceInfo?.device) {
+      toast.error("Connect a device first");
+      return;
+    }
+    setLoading(true);
+    try {
+      await axios.post(`${API}/recovery/build`, { 
+        device_codename: deviceInfo.codename || deviceInfo.device, 
+        recovery_type: selectedRecovery 
+      });
+      toast.success(`${recoveries[selectedRecovery]?.full_name} build started!`);
+      fetchBuilds();
+    } catch (e) {
+      toast.error("Failed to start build");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4" data-testid="recovery-builder-panel">
+      <div className="glass-card rounded-xl p-5">
+        <h3 className="font-semibold text-white flex items-center gap-2 mb-4">
+          <Wrench className="w-4 h-4 text-[#E95420]" /> Select Recovery
+        </h3>
+        <div className="grid grid-cols-2 gap-3">
+          {Object.entries(recoveries).map(([key, info]) => (
+            <motion.div key={key} whileHover={{ scale: 1.02 }}
+              onClick={() => setSelectedRecovery(key)}
+              className={`p-4 rounded-xl cursor-pointer transition-all ${
+                selectedRecovery === key ? "bg-[#E95420]/20 border-2 border-[#E95420]/50" : "glass-card hover:border-white/20"
+              }`}>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-lg bg-[#E95420]/20 flex items-center justify-center">
+                  <Wrench className="w-5 h-5 text-[#E95420]" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-white text-sm">{info.full_name}</h4>
+                  <Badge variant="primary" className="text-[9px]">{info.name}</Badge>
+                </div>
+              </div>
+              <p className="text-xs text-white/50 line-clamp-2">{info.description}</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
+      <div className="glass-card rounded-xl p-5">
+        <h3 className="font-semibold text-white flex items-center gap-2 mb-4">
+          <Shield className="w-4 h-4 text-[#E95420]" /> Root Integration (Optional)
+        </h3>
+        <div className="space-y-2">
+          <select value={rootSolution} onChange={(e) => setRootSolution(e.target.value)}
+            className="input-dark w-full text-sm">
+            {Object.entries(rootSolutions).map(([key, info]) => (
+              <option key={key} value={key}>{info.name} - {info.description}</option>
+            ))}
+          </select>
+          {rootSolution !== "none" && rootSolutions[rootSolution] && (
+            <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+              <p className="text-xs text-blue-300">
+                {rootSolutions[rootSolution].kernel_patch ? "⚠️ Requires kernel patch" : "✓ Boot image patch"}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="glass-card rounded-xl p-5">
+        <button onClick={startBuild} disabled={!deviceInfo || loading} className="btn-primary w-full flex items-center justify-center gap-2">
+          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Rocket className="w-5 h-5" />}
+          Build {recoveries[selectedRecovery]?.name || "Recovery"}
+        </button>
+      </div>
+
+      {builds.length > 0 && (
+        <div className="glass-card rounded-xl p-5">
+          <h3 className="font-semibold text-white flex items-center gap-2 mb-4">
+            <ScrollText className="w-4 h-4 text-[#E95420]" /> Recent Builds
+          </h3>
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {builds.slice(0, 5).map((build) => (
+              <div key={build.id} className="p-3 bg-black/20 rounded-lg flex items-center justify-between">
+                <div>
+                  <span className="text-sm text-white font-medium">{build.recovery_type.toUpperCase()}</span>
+                  <p className="text-xs text-white/40">{build.device_codename}</p>
+                </div>
+                <Badge variant={build.status === "completed" ? "success" : build.status === "building" ? "warning" : "error"}>
+                  {build.status}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ======================= HALIUM BUILDER PANEL =======================
 
 const HaliumBuilderPanel = ({ deviceInfo }) => {
@@ -837,6 +974,7 @@ const Dashboard = () => {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [bottomPanel, setBottomPanel] = useState("terminal");
   const [sessionId] = useState(() => `session-${Date.now()}`);
+  const [showBinaryManager, setShowBinaryManager] = useState(false);
 
   useEffect(() => {
     fetchDevices();
@@ -909,11 +1047,17 @@ const Dashboard = () => {
             <ToolTab icon={CircuitBoard} label="Kernel Forge" active={activeTool === "kernel"} onClick={() => setActiveTool("kernel")} />
             <ToolTab icon={Package} label="OS Builder" active={activeTool === "os"} onClick={() => setActiveTool("os")} />
             <ToolTab icon={Smartphone} label="Android ROM" active={activeTool === "android"} onClick={() => setActiveTool("android")} color="#3DDC84" />
+            <ToolTab icon={Wrench} label="Recovery" active={activeTool === "recovery"} onClick={() => setActiveTool("recovery")} color="#F99B11" />
             <ToolTab icon={Layers} label="Halium" active={activeTool === "halium"} onClick={() => setActiveTool("halium")} />
           </div>
-          <button onClick={fetchDevices} className="btn-outline text-sm">
-            <RefreshCw className="w-4 h-4 mr-2" /> Refresh Devices
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowBinaryManager(!showBinaryManager)} className="btn-outline text-sm">
+              <Settings className="w-4 h-4 mr-2" /> Binaries
+            </button>
+            <button onClick={fetchDevices} className="btn-outline text-sm">
+              <RefreshCw className="w-4 h-4 mr-2" /> Devices
+            </button>
+          </div>
         </div>
       </header>
 
@@ -957,6 +1101,15 @@ const Dashboard = () => {
                             <Badge variant="android">AI-Guided</Badge>
                           </h2>
                           <AndroidBuilderPanel deviceInfo={deviceInfo} sessionId={sessionId} />
+                        </motion.div>
+                      )}
+                      {activeTool === "recovery" && (
+                        <motion.div key="recovery" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                          <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                            <Wrench className="w-5 h-5 text-[#F99B11]" /> Recovery Builder
+                            <Badge variant="warning">TWRP • OrangeFox • More</Badge>
+                          </h2>
+                          <RecoveryBuilderPanel deviceInfo={deviceInfo} />
                         </motion.div>
                       )}
                       {activeTool === "halium" && (
