@@ -2142,21 +2142,59 @@ async def get_recovery_build(build_id: str):
 
 @api_router.get("/root/solutions")
 async def get_root_solutions():
-    """Get available root solutions"""
-    return {"solutions": ROOT_SOLUTIONS}
+    """Get all available root solutions with detailed info"""
+    # Organize by category
+    organized = {
+        "magisk": {},
+        "kernelsu": {},
+        "apatch": {},
+        "legacy": {},
+        "none": {}
+    }
+    
+    for key, solution in ROOT_SOLUTIONS.items():
+        category = solution.get("category", "none")
+        organized[category][key] = solution
+    
+    return {
+        "solutions": ROOT_SOLUTIONS,
+        "organized": organized,
+        "hiding_modules": ROOT_HIDING_MODULES,
+        "patch_methods": KERNEL_PATCH_METHODS
+    }
+
+@api_router.get("/root/hiding-modules")
+async def get_hiding_modules():
+    """Get advanced hiding/spoofing modules"""
+    return {"hiding_modules": ROOT_HIDING_MODULES}
 
 @api_router.post("/root/integrate")
 async def integrate_root_solution(request: dict):
-    """Integrate root solution into kernel or ROM"""
+    """Integrate root solution into kernel or ROM with advanced options"""
     project_id = request.get("project_id")
     project_type = request.get("project_type")  # kernel, android, os
     root_solution = request.get("root_solution", "magisk")
+    hiding_modules = request.get("hiding_modules", [])  # List of hiding modules to include
+    patch_method = request.get("patch_method")  # For kernel-based root
     
     if not project_id or not project_type:
         raise HTTPException(status_code=400, detail="project_id and project_type required")
     
     if root_solution not in ROOT_SOLUTIONS:
         raise HTTPException(status_code=400, detail=f"Invalid root solution. Choose from: {list(ROOT_SOLUTIONS.keys())}")
+    
+    # Validate hiding modules
+    for module in hiding_modules:
+        if module not in ROOT_HIDING_MODULES:
+            raise HTTPException(status_code=400, detail=f"Invalid hiding module: {module}")
+        
+        # Check compatibility
+        module_info = ROOT_HIDING_MODULES[module]
+        if root_solution not in module_info.get("compatible_with", []):
+            raise HTTPException(
+                status_code=400, 
+                detail=f"{module_info['name']} is not compatible with {ROOT_SOLUTIONS[root_solution]['name']}"
+            )
     
     # Get project
     collection_map = {
@@ -2173,24 +2211,107 @@ async def integrate_root_solution(request: dict):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
-    # Update project with root solution
+    solution_info = ROOT_SOLUTIONS[root_solution]
+    
+    # Generate integration instructions
+    instructions = {
+        "root_solution": root_solution,
+        "hiding_modules": hiding_modules,
+        "patch_method": patch_method,
+        "steps": []
+    }
+    
+    if solution_info.get("kernel_patch"):
+        # Kernel-based root
+        if patch_method and patch_method in KERNEL_PATCH_METHODS:
+            method_info = KERNEL_PATCH_METHODS[patch_method]
+            instructions["steps"].extend([
+                f"Method: {method_info['name']}",
+                f"Difficulty: {method_info['difficulty']}",
+                "Required kernel configs:"
+            ] + solution_info.get("kernel_configs", []))
+            
+            if "steps" in method_info:
+                instructions["steps"].extend(method_info["steps"])
+        
+        # Add SUSFS steps if requested
+        if "susfs" in hiding_modules:
+            instructions["steps"].extend([
+                "",
+                "SUSFS Integration:",
+                "1. Clone SUSFS repository",
+                "2. Apply SUSFS patches to kernel fs/ directory",
+                "3. Add SUSFS hooks to kernel",
+                "4. Compile kernel with SUSFS support",
+                "5. Configure SUSFS via KernelSU manager after flash"
+            ])
+    else:
+        # Boot image based root
+        instructions["steps"].extend([
+            f"1. Flash {solution_info['name']} to boot partition",
+            "2. Install manager app",
+            "3. Grant root permissions as needed"
+        ])
+    
+    # Add hiding module instructions
+    for module in hiding_modules:
+        module_info = ROOT_HIDING_MODULES[module]
+        instructions["steps"].extend([
+            "",
+            f"{module_info['name']} Setup:",
+            f"Repo: {module_info.get('repo', 'Check documentation')}",
+            f"Effectiveness: {module_info.get('effectiveness', 'Unknown')}",
+            f"Difficulty: {module_info.get('setup_difficulty', 'Unknown')}"
+        ])
+    
+    # Update project
     await collection.update_one(
         {"id": project_id},
         {"$set": {
             "root_solution": root_solution,
             "root_integrated": True,
+            "root_hiding_modules": hiding_modules,
+            "root_patch_method": patch_method,
+            "root_instructions": instructions,
             "updated_at": datetime.now(timezone.utc).isoformat()
         }}
     )
     
-    solution_info = ROOT_SOLUTIONS[root_solution]
-    
     return {
         "success": True,
-        "message": f"{solution_info['name']} will be integrated into the build",
+        "message": f"{solution_info['name']} integration configured",
         "requires_kernel_patch": solution_info.get("kernel_patch", False),
-        "install_method": solution_info.get("install_method", "boot_patch")
+        "install_method": solution_info.get("install_method", "boot_patch"),
+        "patch_method": patch_method,
+        "hiding_modules": [ROOT_HIDING_MODULES[m]["name"] for m in hiding_modules],
+        "instructions": instructions,
+        "safetynet_status": solution_info.get("safetynet", "Unknown"),
+        "play_integrity_status": solution_info.get("play_integrity", "Unknown"),
+        "difficulty": solution_info.get("difficulty", "Unknown")
     }
+
+@api_router.get("/root/compare")
+async def compare_root_solutions():
+    """Compare all root solutions side-by-side"""
+    comparison = []
+    
+    for key, solution in ROOT_SOLUTIONS.items():
+        if key == "none":
+            continue
+        
+        comparison.append({
+            "id": key,
+            "name": solution["name"],
+            "category": solution.get("category", "unknown"),
+            "kernel_patch": solution.get("kernel_patch", False),
+            "safetynet": solution.get("safetynet", "Unknown"),
+            "play_integrity": solution.get("play_integrity", "Unknown"),
+            "difficulty": solution.get("difficulty", "Unknown"),
+            "recommended_for": solution.get("recommended_for", ""),
+            "features": solution.get("features", [])
+        })
+    
+    return {"comparison": comparison}
 async def get_halium_versions():
     versions = []
     for vid, info in HALIUM_VERSIONS.items():
