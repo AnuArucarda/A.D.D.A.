@@ -1,307 +1,243 @@
 {
-  "timestamp": "2026-02-15T03:29:53.788403",
-  "total_tests": 24,
-  "passed_tests": 22,
-  "success_rate": 91.66666666666666,
-  "results": [
+  "timestamp": "2026-02-15T04:02:19.393542",
+  "backend_url": "https://chat-persistence-1.preview.emergentagent.com",
+  "tests": [
     {
-      "test": "Health Check",
-      "status": "\u2705 PASS",
+      "name": "GET /health - Get tools status including kernel_forge_ready and os_builder_ready",
       "success": true,
-      "details": "Status: 200",
-      "response_data": {
-        "status": "healthy",
-        "tools": {
-          "adb": false,
-          "fastboot": false
-        },
-        "timestamp": "2026-02-15T03:29:44.505116+00:00"
-      }
+      "details": "Status: 200, Response: {'status': 'healthy', 'tools': {'adb': False, 'fastboot': False, 'git': True, 'make': True, 'dtc': F...",
+      "endpoint": "/health",
+      "timestamp": "2026-02-15T04:02:19.561176"
     },
     {
-      "test": "ADB Tool Available",
-      "status": "\u274c FAIL",
+      "name": "Health API contains kernel_forge_ready",
+      "success": true,
+      "details": "kernel_forge_ready: True",
+      "endpoint": "",
+      "timestamp": "2026-02-15T04:02:19.561729"
+    },
+    {
+      "name": "Health API contains os_builder_ready",
+      "success": true,
+      "details": "os_builder_ready: True",
+      "endpoint": "",
+      "timestamp": "2026-02-15T04:02:19.561738"
+    },
+    {
+      "name": "Health API contains tools",
+      "success": true,
+      "details": "tools: {'adb': False, 'fastboot': False, 'git': True, 'make': True, 'dtc': False, 'mkbootimg': False, 'debootstrap': False, 'gcc-aarch64': True, 'gcc-arm': False}",
+      "endpoint": "",
+      "timestamp": "2026-02-15T04:02:19.561746"
+    },
+    {
+      "name": "GET /kernel/mainline-versions - Get kernel versions",
+      "success": true,
+      "details": "Status: 200, Response: {'versions': {'6.8': {'status': 'mainline', 'eol': False}, '6.6': {'status': 'lts', 'eol': False}, '...",
+      "endpoint": "/kernel/mainline-versions",
+      "timestamp": "2026-02-15T04:02:19.688907"
+    },
+    {
+      "name": "Kernel mainline versions count",
+      "success": true,
+      "details": "Found 10 versions",
+      "endpoint": "",
+      "timestamp": "2026-02-15T04:02:19.689489"
+    },
+    {
+      "name": "GET /kernel/config-requirements - Get kernel config requirements",
+      "success": true,
+      "details": "Status: 200, Response: {'requirements': [{'config': 'CONFIG_DEVTMPFS', 'required': True, 'category': 'core', 'description':...",
+      "endpoint": "/kernel/config-requirements",
+      "timestamp": "2026-02-15T04:02:19.792617"
+    },
+    {
+      "name": "Kernel config requirements count",
+      "success": true,
+      "details": "Found 44 config requirements",
+      "endpoint": "",
+      "timestamp": "2026-02-15T04:02:19.793251"
+    },
+    {
+      "name": "GET /kernel/projects - List kernel projects",
+      "success": true,
+      "details": "Status: 200, Response: {'projects': []}...",
+      "endpoint": "/kernel/projects",
+      "timestamp": "2026-02-15T04:02:19.911126"
+    },
+    {
+      "name": "POST /kernel/projects - Create kernel project",
+      "success": true,
+      "details": "Status: 200, Response: {'id': '72f10cdf-6da1-4d5b-aa44-07da621299bd', 'name': 'kernel-test_device', 'device_codename': 'tes...",
+      "endpoint": "/kernel/projects",
+      "timestamp": "2026-02-15T04:02:20.070270"
+    },
+    {
+      "name": "Kernel project creation returns ID",
+      "success": true,
+      "details": "Project ID: 72f10cdf-6da1-4d5b-aa44-07da621299bd",
+      "endpoint": "",
+      "timestamp": "2026-02-15T04:02:20.070898"
+    },
+    {
+      "name": "GET /kernel/projects/72f10cdf-6da1-4d5b-aa44-07da621299bd - Get specific kernel project",
+      "success": true,
+      "details": "Status: 200, Response: {'id': '72f10cdf-6da1-4d5b-aa44-07da621299bd', 'name': 'kernel-test_device', 'device_codename': 'tes...",
+      "endpoint": "/kernel/projects/72f10cdf-6da1-4d5b-aa44-07da621299bd",
+      "timestamp": "2026-02-15T04:02:20.212278"
+    },
+    {
+      "name": "GET /os/distros - Get mobile and desktop distributions",
+      "success": true,
+      "details": "Status: 200, Response: {'mobile': {'ubuntu-touch': {'name': 'Ubuntu Touch', 'description': 'Ubuntu for phones and tablets b...",
+      "endpoint": "/os/distros",
+      "timestamp": "2026-02-15T04:02:20.312061"
+    },
+    {
+      "name": "Mobile distros count",
+      "success": true,
+      "details": "Found 7 mobile distros",
+      "endpoint": "",
+      "timestamp": "2026-02-15T04:02:20.312637"
+    },
+    {
+      "name": "Desktop distros count",
+      "success": true,
+      "details": "Found 8 desktop distros",
+      "endpoint": "",
+      "timestamp": "2026-02-15T04:02:20.312646"
+    },
+    {
+      "name": "Mobile distro ubuntu-touch present",
+      "success": true,
+      "details": "Name: Ubuntu Touch",
+      "endpoint": "",
+      "timestamp": "2026-02-15T04:02:20.312652"
+    },
+    {
+      "name": "Mobile distro postmarketos present",
+      "success": true,
+      "details": "Name: postmarketOS",
+      "endpoint": "",
+      "timestamp": "2026-02-15T04:02:20.312657"
+    },
+    {
+      "name": "Mobile distro droidian present",
+      "success": true,
+      "details": "Name: Droidian",
+      "endpoint": "",
+      "timestamp": "2026-02-15T04:02:20.312661"
+    },
+    {
+      "name": "Mobile distro mobian present",
+      "success": true,
+      "details": "Name: Mobian",
+      "endpoint": "",
+      "timestamp": "2026-02-15T04:02:20.312666"
+    },
+    {
+      "name": "Desktop distro ubuntu present",
+      "success": true,
+      "details": "Name: Ubuntu",
+      "endpoint": "",
+      "timestamp": "2026-02-15T04:02:20.312671"
+    },
+    {
+      "name": "Desktop distro debian present",
+      "success": true,
+      "details": "Name: Debian",
+      "endpoint": "",
+      "timestamp": "2026-02-15T04:02:20.312675"
+    },
+    {
+      "name": "Desktop distro arch present",
+      "success": true,
+      "details": "Name: Arch Linux",
+      "endpoint": "",
+      "timestamp": "2026-02-15T04:02:20.312679"
+    },
+    {
+      "name": "Desktop distro fedora present",
+      "success": true,
+      "details": "Name: Fedora",
+      "endpoint": "",
+      "timestamp": "2026-02-15T04:02:20.312686"
+    },
+    {
+      "name": "GET /os/projects - List OS image projects",
+      "success": true,
+      "details": "Status: 200, Response: {'projects': []}...",
+      "endpoint": "/os/projects",
+      "timestamp": "2026-02-15T04:02:20.428709"
+    },
+    {
+      "name": "POST /os/projects - Create OS project",
+      "success": true,
+      "details": "Status: 200, Response: {'id': '001cf0f9-e7fa-4c4b-9e8b-75566fb354e5', 'name': 'ubuntu-touch-test_device', 'device_codename'...",
+      "endpoint": "/os/projects",
+      "timestamp": "2026-02-15T04:02:20.572332"
+    },
+    {
+      "name": "OS project creation returns ID",
+      "success": true,
+      "details": "Project ID: 001cf0f9-e7fa-4c4b-9e8b-75566fb354e5",
+      "endpoint": "",
+      "timestamp": "2026-02-15T04:02:20.572947"
+    },
+    {
+      "name": "GET /halium/versions - Get Halium versions",
+      "success": true,
+      "details": "Status: 200, Response: {'versions': [{'id': 'halium-7.1', 'name': 'Halium 7.1', 'android_base': '7.1 (14.1)', 'status': 'st...",
+      "endpoint": "/halium/versions",
+      "timestamp": "2026-02-15T04:02:20.712399"
+    },
+    {
+      "name": "Halium versions count",
+      "success": true,
+      "details": "Found 4 Halium versions",
+      "endpoint": "",
+      "timestamp": "2026-02-15T04:02:20.713116"
+    },
+    {
+      "name": "Required Halium versions present",
+      "success": true,
+      "details": "Found versions: ['halium-7.1', 'halium-9.0', 'halium-10.0', 'halium-11.0']",
+      "endpoint": "",
+      "timestamp": "2026-02-15T04:02:20.713136"
+    },
+    {
+      "name": "GET /devices - Get device list",
+      "success": true,
+      "details": "Status: 200, Response: {'devices': [], 'adb_available': False}...",
+      "endpoint": "/devices",
+      "timestamp": "2026-02-15T04:02:20.813764"
+    },
+    {
+      "name": "Devices API returns device list",
+      "success": true,
+      "details": "Found 0 devices, ADB available: False",
+      "endpoint": "",
+      "timestamp": "2026-02-15T04:02:20.814414"
+    },
+    {
+      "name": "ADB availability (container limitation)",
+      "success": true,
+      "details": "ADB not available in container environment - expected",
+      "endpoint": "",
+      "timestamp": "2026-02-15T04:02:20.814424"
+    },
+    {
+      "name": "POST /ai/chat - AI chat works with AI responses",
       "success": false,
-      "details": "ADB: Not Available",
-      "response_data": null
-    },
-    {
-      "test": "Fastboot Tool Available",
-      "status": "\u274c FAIL",
-      "success": false,
-      "details": "Fastboot: Not Available",
-      "response_data": null
-    },
-    {
-      "test": "Get Halium Versions",
-      "status": "\u2705 PASS",
-      "success": true,
-      "details": "Status: 200",
-      "response_data": {
-        "versions": [
-          {
-            "id": "halium-7.1",
-            "name": "Halium 7.1",
-            "android_base": "7.1 Nougat",
-            "status": "stable"
-          },
-          {
-            "id": "halium-9.0",
-            "name": "Halium 9.0",
-            "android_base": "9.0 Pie",
-            "status": "stable"
-          },
-          {
-            "id": "halium-10.0",
-            "name": "Halium 10.0",
-            "android_base": "10 Q",
-            "status": "stable"
-          },
-          {
-            "id": "halium-11.0",
-            "name": "Halium 11.0",
-            "android_base": "11 R",
-            "status": "latest"
-          }
-        ]
-      }
-    },
-    {
-      "test": "Contains Expected Versions",
-      "status": "\u2705 PASS",
-      "success": true,
-      "details": "Found 4 versions: ['halium-7.1', 'halium-9.0', 'halium-10.0', 'halium-11.0']",
-      "response_data": null
-    },
-    {
-      "test": "Version Fields Complete",
-      "status": "\u2705 PASS",
-      "success": true,
-      "details": "Fields: ['id', 'name', 'android_base', 'status']",
-      "response_data": null
-    },
-    {
-      "test": "Get Build Steps",
-      "status": "\u2705 PASS",
-      "success": true,
-      "details": "Status: 200",
-      "response_data": {
-        "steps": [
-          {
-            "id": 1,
-            "name": "Environment Setup",
-            "description": "Install build dependencies and configure environment"
-          },
-          {
-            "id": 2,
-            "name": "Repo Init",
-            "description": "Initialize Halium manifest repository"
-          },
-          {
-            "id": 3,
-            "name": "Device Tree",
-            "description": "Set up device-specific repositories"
-          },
-          {
-            "id": 4,
-            "name": "Kernel Config",
-            "description": "Configure kernel for Halium compatibility"
-          },
-          {
-            "id": 5,
-            "name": "Vendor Blobs",
-            "description": "Extract or download vendor proprietary files"
-          },
-          {
-            "id": 6,
-            "name": "Build System",
-            "description": "Compile the Halium system image"
-          },
-          {
-            "id": 7,
-            "name": "Build Kernel",
-            "description": "Compile the Linux kernel"
-          },
-          {
-            "id": 8,
-            "name": "Generate Rootfs",
-            "description": "Create the Linux root filesystem"
-          },
-          {
-            "id": 9,
-            "name": "Flash & Test",
-            "description": "Flash images to device and verify boot"
-          }
-        ]
-      }
-    },
-    {
-      "test": "Build Steps Retrieved",
-      "status": "\u2705 PASS",
-      "success": true,
-      "details": "Found 9 build steps",
-      "response_data": null
-    },
-    {
-      "test": "Contains Expected Steps",
-      "status": "\u2705 PASS",
-      "success": true,
-      "details": "Steps: ['Environment Setup', 'Repo Init', 'Device Tree']...",
-      "response_data": null
-    },
-    {
-      "test": "List Devices",
-      "status": "\u2705 PASS",
-      "success": true,
-      "details": "Status: 200",
-      "response_data": {
-        "devices": [],
-        "error": "/bin/sh: 1: adb: not found\n",
-        "adb_available": false
-      }
-    },
-    {
-      "test": "Devices Endpoint Working",
-      "status": "\u2705 PASS",
-      "success": true,
-      "details": "Found 0 devices, ADB: False",
-      "response_data": null
-    },
-    {
-      "test": "Returns Device List",
-      "status": "\u2705 PASS",
-      "success": true,
-      "details": "Device list type: <class 'list'>",
-      "response_data": null
-    },
-    {
-      "test": "Execute Echo Command",
-      "status": "\u2705 PASS",
-      "success": true,
-      "details": "Status: 200",
-      "response_data": {
-        "command": "echo 'Hello Halium Test'",
-        "stdout": "Hello Halium Test\n",
-        "stderr": "",
-        "exit_code": 0,
-        "success": true
-      }
-    },
-    {
-      "test": "Terminal Response Complete",
-      "status": "\u2705 PASS",
-      "success": true,
-      "details": "Fields: stdout=True, exit_code=True, success=True",
-      "response_data": null
-    },
-    {
-      "test": "Command Executed Successfully",
-      "status": "\u2705 PASS",
-      "success": true,
-      "details": "Exit code: 0",
-      "response_data": null
-    },
-    {
-      "test": "Get Command History",
-      "status": "\u2705 PASS",
-      "success": true,
-      "details": "Status: 200",
-      "response_data": {
-        "history": [
-          {
-            "id": "ac3dcec7-109d-43c8-bc9c-ac01ca2c3f0a",
-            "command": "echo 'Hello Halium Test'",
-            "stdout": "Hello Halium Test\n",
-            "stderr": "",
-            "exit_code": 0,
-            "session_id": "test-session-1771126184",
-            "timestamp": "2026-02-15T03:29:45.641266+00:00"
-          }
-        ]
-      }
-    },
-    {
-      "test": "Command History Available",
-      "status": "\u2705 PASS",
-      "success": true,
-      "details": "History entries: 1",
-      "response_data": null
-    },
-    {
-      "test": "Send AI Chat Message",
-      "status": "\u2705 PASS",
-      "success": true,
-      "details": "Status: 200",
-      "response_data": {
-        "response": "# Hello! Welcome to Halium Build Assistant \ud83d\ude80\n\nYes, I'd be happy to help you with Halium porting! I can assist you with:\n\n## What I Can Help With:\n\n**Device Analysis**\n- Check device compatibility via ADB/Fastboot\n- Identify device codename, SoC, and Android version\n- Find existing device trees and kernel sources\n\n**Build Setup**\n- Guide you through repo initialization\n- Set up device tree and kernel source\n- Configure build environment\n\n**Troubleshooting**\n- Debug build errors\n- Kernel configuration issues\n- Boot problems and logs analysis\n\n**Process Guidance**\n- Step-by-step Halium porting workflow\n- Rootfs creation and flashing\n- Testing and debugging\n\n## To Get Started:\n\n**Option 1: Analyze Your Device**\nIf you have an Android device connected, I can check its specifications and compatibility.\n\n**Option 2: Existing Project**\nIf you already have a device in mind or have started porting, tell me what you need help with.\n\n**Option 3: Learn the Process**\nI can explain the Halium porting workflow from start to finish.\n\nWhat would you like to do? Do you have a device connected, or would you like to learn about the process first?",
-        "extracted_commands": [],
-        "session_id": "test-session-1771126184"
-      }
-    },
-    {
-      "test": "AI Response Complete",
-      "status": "\u2705 PASS",
-      "success": true,
-      "details": "Response length: 1143",
-      "response_data": null
-    },
-    {
-      "test": "AI Commands Extraction",
-      "status": "\u2705 PASS",
-      "success": true,
-      "details": "Commands extracted: 0",
-      "response_data": null
-    },
-    {
-      "test": "Get Chat History",
-      "status": "\u2705 PASS",
-      "success": true,
-      "details": "Status: 200",
-      "response_data": {
-        "messages": [
-          {
-            "id": "866898d6-231f-4705-8fb3-04ca033ce463",
-            "session_id": "test-session-1771126184",
-            "role": "user",
-            "content": "Hello, can you help with Halium porting?",
-            "timestamp": "2026-02-15T03:29:53.391506+00:00"
-          },
-          {
-            "id": "df20b23e-79a5-4807-9f4a-7f788d5e1254",
-            "session_id": "test-session-1771126184",
-            "role": "assistant",
-            "content": "# Hello! Welcome to Halium Build Assistant \ud83d\ude80\n\nYes, I'd be happy to help you with Halium porting! I can assist you with:\n\n## What I Can Help With:\n\n**Device Analysis**\n- Check device compatibility via ADB/Fastboot\n- Identify device codename, SoC, and Android version\n- Find existing device trees and kernel sources\n\n**Build Setup**\n- Guide you through repo initialization\n- Set up device tree and kernel source\n- Configure build environment\n\n**Troubleshooting**\n- Debug build errors\n- Kernel configuration issues\n- Boot problems and logs analysis\n\n**Process Guidance**\n- Step-by-step Halium porting workflow\n- Rootfs creation and flashing\n- Testing and debugging\n\n## To Get Started:\n\n**Option 1: Analyze Your Device**\nIf you have an Android device connected, I can check its specifications and compatibility.\n\n**Option 2: Existing Project**\nIf you already have a device in mind or have started porting, tell me what you need help with.\n\n**Option 3: Learn the Process**\nI can explain the Halium porting workflow from start to finish.\n\nWhat would you like to do? Do you have a device connected, or would you like to learn about the process first?",
-            "extracted_commands": [],
-            "timestamp": "2026-02-15T03:29:53.393105+00:00"
-          }
-        ]
-      }
-    },
-    {
-      "test": "Chat History Available",
-      "status": "\u2705 PASS",
-      "success": true,
-      "details": "Chat messages: 2",
-      "response_data": null
-    },
-    {
-      "test": "List Fastboot Devices",
-      "status": "\u2705 PASS",
-      "success": true,
-      "details": "Status: 200",
-      "response_data": {
-        "devices": [],
-        "fastboot_available": false
-      }
-    },
-    {
-      "test": "List Build Sessions",
-      "status": "\u2705 PASS",
-      "success": true,
-      "details": "Status: 200",
-      "response_data": {
-        "sessions": []
-      }
+      "details": "Request failed: HTTPSConnectionPool(host='chat-persistence-1.preview.emergentagent.com', port=443): Read timed out. (read timeout=10)",
+      "endpoint": "/ai/chat",
+      "timestamp": "2026-02-15T04:02:30.871233"
     }
-  ]
+  ],
+  "summary": {
+    "total_tests": 33,
+    "passed": 32,
+    "failed": 1,
+    "success_rate": 96.96969696969697
+  }
 }
