@@ -27,6 +27,7 @@ load_dotenv(ROOT_DIR / '.env')
 from binary_manager import binary_manager, BINARY_SOURCES
 from build_orchestrator import build_orchestrator
 from app_compiler import app_compiler
+from ai_build_assistant import ai_build_assistant
 
 # MongoDB connection
 mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
@@ -2456,6 +2457,132 @@ async def download_compiled_app(package_name: str):
         media_type="application/zip",
         filename=f"{package_name}.zip"
     )
+
+# ======================= AI BUILD ASSISTANT ROUTES =======================
+
+@api_router.post("/ai/build-assistant")
+async def chat_with_build_assistant(request: dict):
+    """Chat with AI build assistant for any tool"""
+    session_id = request.get("session_id")
+    message = request.get("message")
+    tool_type = request.get("tool_type", "kernel")  # kernel, os, android, recovery, halium
+    context = request.get("context", {})
+    
+    if not session_id or not message:
+        raise HTTPException(status_code=400, detail="session_id and message required")
+    
+    response = await ai_build_assistant.send_message(session_id, message, tool_type, context)
+    
+    return {"response": response}
+
+@api_router.post("/ai/generate-kernel-config")
+async def generate_kernel_config(request: dict):
+    """Generate kernel configuration from natural language description"""
+    description = request.get("description")
+    device_info = request.get("device_info", {})
+    
+    if not description:
+        raise HTTPException(status_code=400, detail="description required")
+    
+    config = await ai_build_assistant.generate_kernel_config(description, device_info)
+    
+    return {"config": config, "description": description}
+
+@api_router.post("/ai/recommend-os")
+async def recommend_os_config(request: dict):
+    """Get OS recommendation from natural language description"""
+    description = request.get("description")
+    device_info = request.get("device_info", {})
+    
+    if not description:
+        raise HTTPException(status_code=400, detail="description required")
+    
+    recommendation = await ai_build_assistant.generate_os_recommendation(description, device_info)
+    
+    return {"recommendation": recommendation, "description": description}
+
+@api_router.get("/ai/capabilities")
+async def get_ai_capabilities():
+    """Get information about AI assistant capabilities for each tool"""
+    return {
+        "tools": {
+            "kernel": {
+                "name": "Kernel Forge AI",
+                "capabilities": [
+                    "Generate kernel configs from natural language",
+                    "Optimize for performance/battery/features",
+                    "Recommend kernel versions",
+                    "Explain technical decisions"
+                ],
+                "example_queries": [
+                    "I want maximum battery life",
+                    "Build a gaming kernel",
+                    "I need Docker support",
+                    "Optimize for Ubuntu Touch"
+                ]
+            },
+            "os": {
+                "name": "OS Builder AI",
+                "capabilities": [
+                    "Recommend best distro for use case",
+                    "Suggest package selections",
+                    "Compare distros",
+                    "Set realistic expectations"
+                ],
+                "example_queries": [
+                    "I want a daily driver phone",
+                    "Best distro for privacy",
+                    "Linux for an old tablet",
+                    "Something like Ubuntu but lighter"
+                ]
+            },
+            "android": {
+                "name": "Android ROM AI",
+                "capabilities": [
+                    "Answer quick questions during build",
+                    "Compare ROM options",
+                    "Recommend GApps/root solutions",
+                    "Explain trade-offs"
+                ],
+                "example_queries": [
+                    "Magisk or KernelSU for banking apps?",
+                    "What's the difference between AOSP and LineageOS?",
+                    "Which GApps package should I use?",
+                    "Best ROM for privacy"
+                ]
+            },
+            "recovery": {
+                "name": "Recovery Builder AI",
+                "capabilities": [
+                    "Recommend best recovery for device",
+                    "Compare recovery features",
+                    "Root solution integration advice",
+                    "Device-specific guidance"
+                ],
+                "example_queries": [
+                    "TWRP or OrangeFox?",
+                    "Most stable recovery",
+                    "Recovery with best UI",
+                    "Need root with recovery"
+                ]
+            },
+            "halium": {
+                "name": "Halium AI",
+                "capabilities": [
+                    "Version selection guidance",
+                    "Compatibility checking",
+                    "Set realistic expectations",
+                    "Alternative approaches"
+                ],
+                "example_queries": [
+                    "Can I run Linux on my device?",
+                    "Which Halium version?",
+                    "Will camera work?",
+                    "Halium vs custom kernel"
+                ]
+            }
+        }
+    }
 
 # ======================= APP SETUP =======================
 
