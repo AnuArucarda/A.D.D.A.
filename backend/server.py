@@ -23,6 +23,10 @@ import zipfile
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
+# Import our new modules
+from binary_manager import binary_manager
+from build_orchestrator import build_orchestrator
+
 # MongoDB connection
 mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 client = AsyncIOMotorClient(mongo_url)
@@ -952,25 +956,49 @@ async def root():
 
 @api_router.get("/health")
 async def health_check():
-    tools = {
-        "adb": check_tool_available("adb"),
-        "fastboot": check_tool_available("fastboot"),
-        "git": check_tool_available("git"),
-        "make": check_tool_available("make"),
-        "repo": check_tool_available("repo"),
-        "dtc": check_tool_available("dtc"),
-        "mkbootimg": check_tool_available("mkbootimg"),
-        "debootstrap": check_tool_available("debootstrap"),
-        "gcc-aarch64": check_tool_available("aarch64-linux-gnu-gcc"),
-    }
+    tools = binary_manager.get_all_status()
     return {
         "status": "healthy",
         "tools": tools,
-        "kernel_forge_ready": all([tools["git"], tools["make"]]),
+        "kernel_forge_ready": tools.get("git", {}).get("available", False) and tools.get("make", {}).get("available", False),
         "os_builder_ready": True,
-        "android_builder_ready": all([tools["git"], tools.get("repo", False) or True]),
+        "android_builder_ready": tools.get("git", {}).get("available", False),
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
+
+# ======================= BINARY MANAGEMENT ROUTES =======================
+
+@api_router.get("/binaries/status")
+async def get_binaries_status():
+    """Get status of all required binaries"""
+    return {
+        "binaries": binary_manager.get_all_status(),
+        "configured_paths": binary_manager.binary_paths
+    }
+
+@api_router.post("/binaries/{binary_name}/set-path")
+async def set_binary_path(binary_name: str, path: str):
+    """Set custom path for a binary"""
+    success = binary_manager.set_binary_path(binary_name, path)
+    if success:
+        return {"success": True, "message": f"Path set for {binary_name}"}
+    raise HTTPException(status_code=400, detail="Invalid path or binary not found")
+
+@api_router.post("/binaries/{binary_name}/install")
+async def install_binary(binary_name: str):
+    """Download and install a binary"""
+    success, message = await binary_manager.download_and_install_binary(binary_name)
+    if success:
+        return {"success": True, "message": message}
+    raise HTTPException(status_code=400, detail=message)
+
+@api_router.get("/binaries/{binary_name}/path")
+async def get_binary_path(binary_name: str):
+    """Get the path to a specific binary"""
+    available, path = binary_manager.check_binary(binary_name)
+    if available:
+        return {"available": True, "path": path}
+    return {"available": False, "path": None, "can_install": binary_name in binary_manager.BINARY_SOURCES}
 
 # ======================= DEVICE ROUTES =======================
 
