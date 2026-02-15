@@ -3277,10 +3277,25 @@ app.include_router(api_router)
 @app.get("/")
 async def root():
     return {
-        "app": "Linux Device Forge",
-        "version": "3.0.0",
+        "app": "A.D.D.A. - Android Device Developer Agent",
+        "version": "1.0.0",
         "status": "running",
-        "features": ["Kernel Forge", "OS Builder", "Android ROM Builder", "Halium", "Recovery Builder", "Binary Management"]
+        "tagline": "Making mobile devices as flexible as desktop devices",
+        "features": [
+            "Multi-AI Provider System (8 providers)",
+            "Factory Image Management",
+            "Device Auto-Detection",
+            "Build History & Forking",
+            "GitHub Integration",
+            "Kernel Forge",
+            "OS Builder",
+            "Android ROM Builder",
+            "Halium Support",
+            "Recovery Builder",
+            "Binary Management"
+        ],
+        "copyright": "© 2026 AnuArucarda",
+        "license": "MIT"
     }
 
 @app.on_event("shutdown")
