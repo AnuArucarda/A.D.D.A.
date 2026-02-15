@@ -1045,6 +1045,529 @@ async def get_android_build_config(project_id: str):
         "interview_answers": project.get("interview_answers", {})
     }
 
+# ======================= RECIPE & EXPORT ROUTES =======================
+
+@api_router.post("/recipes")
+async def save_recipe(recipe_data: dict):
+    """Save a build configuration as a reusable recipe"""
+    recipe = BuildRecipe(
+        name=recipe_data.get("name", "Unnamed Recipe"),
+        description=recipe_data.get("description"),
+        author=recipe_data.get("author"),
+        device_codename=recipe_data.get("device_codename", "unknown"),
+        device_model=recipe_data.get("device_model"),
+        architecture=recipe_data.get("architecture", "arm64"),
+        build_type=recipe_data.get("build_type", "android"),
+        config=recipe_data.get("config", {}),
+        interview_depth=recipe_data.get("interview_depth"),
+        interview_answers=recipe_data.get("interview_answers"),
+        base_rom=recipe_data.get("base_rom"),
+        android_version=recipe_data.get("android_version"),
+        gapps_type=recipe_data.get("gapps_type"),
+        root_solution=recipe_data.get("root_solution"),
+        kernel_type=recipe_data.get("kernel_type"),
+        kernel_source=recipe_data.get("kernel_source"),
+        defconfig=recipe_data.get("defconfig"),
+        kernel_version=recipe_data.get("kernel_version"),
+        distro=recipe_data.get("distro"),
+        distro_version=recipe_data.get("distro_version"),
+        halium_version=recipe_data.get("halium_version"),
+        tags=recipe_data.get("tags", []),
+        is_public=recipe_data.get("is_public", False)
+    )
+    
+    doc = recipe.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    doc['updated_at'] = doc['updated_at'].isoformat()
+    await db.recipes.insert_one(doc)
+    
+    return recipe
+
+@api_router.get("/recipes")
+async def list_recipes(build_type: Optional[str] = None, device: Optional[str] = None, public_only: bool = False):
+    """List saved recipes with optional filters"""
+    query = {}
+    if build_type:
+        query["build_type"] = build_type
+    if device:
+        query["device_codename"] = device
+    if public_only:
+        query["is_public"] = True
+    
+    recipes = await db.recipes.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return {"recipes": recipes, "count": len(recipes)}
+
+@api_router.get("/recipes/{recipe_id}")
+async def get_recipe(recipe_id: str):
+    """Get a specific recipe"""
+    recipe = await db.recipes.find_one({"id": recipe_id}, {"_id": 0})
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    
+    # Increment download count
+    await db.recipes.update_one({"id": recipe_id}, {"$inc": {"downloads": 1}})
+    
+    return recipe
+
+@api_router.delete("/recipes/{recipe_id}")
+async def delete_recipe(recipe_id: str):
+    """Delete a recipe"""
+    result = await db.recipes.delete_one({"id": recipe_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    return {"message": "Recipe deleted", "id": recipe_id}
+
+@api_router.post("/recipes/{recipe_id}/apply")
+async def apply_recipe(recipe_id: str, device_codename: str):
+    """Create a new project from a recipe"""
+    recipe = await db.recipes.find_one({"id": recipe_id}, {"_id": 0})
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    
+    # Create appropriate project type from recipe
+    if recipe.get("build_type") == "android":
+        project = AndroidBuildProject(
+            name=f"{recipe.get('name')}-{device_codename}",
+            device_codename=device_codename,
+            interview_depth=recipe.get("interview_depth", "standard"),
+            interview_complete=True,  # Skip interview, use recipe
+            interview_answers=recipe.get("interview_answers", {}),
+            base_rom=recipe.get("base_rom"),
+            android_version=recipe.get("android_version"),
+            gapps_type=recipe.get("gapps_type"),
+            root_solution=recipe.get("root_solution"),
+            kernel_type=recipe.get("kernel_type"),
+            build_status="ready"
+        )
+        doc = project.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        doc['updated_at'] = doc['updated_at'].isoformat()
+        await db.android_projects.insert_one(doc)
+        return {"project_type": "android", "project": project}
+    
+    elif recipe.get("build_type") == "kernel":
+        project = KernelProject(
+            name=f"kernel-{device_codename}",
+            device_codename=device_codename,
+            source_url=recipe.get("kernel_source"),
+            defconfig=recipe.get("defconfig"),
+            target_version=recipe.get("kernel_version")
+        )
+        doc = project.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        doc['updated_at'] = doc['updated_at'].isoformat()
+        await db.kernel_projects.insert_one(doc)
+        return {"project_type": "kernel", "project": project}
+    
+    elif recipe.get("build_type") == "os":
+        project = OSImageProject(
+            name=f"{recipe.get('distro')}-{device_codename}",
+            device_codename=device_codename,
+            distro=recipe.get("distro"),
+            distro_version=recipe.get("distro_version")
+        )
+        doc = project.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        await db.os_image_projects.insert_one(doc)
+        return {"project_type": "os", "project": project}
+    
+    return {"error": "Unknown build type"}
+
+@api_router.post("/exports/create")
+async def create_export_package(project_id: str, project_type: str):
+    """Create a complete export package with images, scripts, and configs"""
+    
+    # Get project based on type
+    if project_type == "android":
+        project = await db.android_projects.find_one({"id": project_id}, {"_id": 0})
+    elif project_type == "kernel":
+        project = await db.kernel_projects.find_one({"id": project_id}, {"_id": 0})
+    elif project_type == "os":
+        project = await db.os_image_projects.find_one({"id": project_id}, {"_id": 0})
+    elif project_type == "halium":
+        project = await db.halium_builds.find_one({"id": project_id}, {"_id": 0})
+    else:
+        raise HTTPException(status_code=400, detail="Invalid project type")
+    
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    # Create export directory
+    export_dir = WORK_DIR / "exports" / project_id
+    export_dir.mkdir(parents=True, exist_ok=True)
+    
+    device_codename = project.get("device_codename", "device")
+    
+    # Create package structure
+    package = BuildExportPackage(
+        project_id=project_id,
+        project_type=project_type,
+        name=f"{project_type}-{device_codename}-export",
+        device_codename=device_codename,
+        build_date=datetime.now(timezone.utc).isoformat()
+    )
+    
+    # Generate build script
+    build_script = generate_build_script(project, project_type)
+    script_path = export_dir / "build.sh"
+    async with aiofiles.open(script_path, 'w') as f:
+        await f.write(build_script)
+    package.scripts.append(str(script_path))
+    
+    # Generate config file
+    config_content = json.dumps(project, indent=2, default=str)
+    config_path = export_dir / "build_config.json"
+    async with aiofiles.open(config_path, 'w') as f:
+        await f.write(config_content)
+    package.configs.append(str(config_path))
+    
+    # Generate README
+    readme_content = generate_readme(project, project_type)
+    readme_path = export_dir / "README.md"
+    async with aiofiles.open(readme_path, 'w') as f:
+        await f.write(readme_content)
+    
+    # Generate environment file
+    env_content = generate_env_file(project, project_type)
+    env_path = export_dir / "build_env.sh"
+    async with aiofiles.open(env_path, 'w') as f:
+        await f.write(env_content)
+    package.scripts.append(str(env_path))
+    
+    # Copy output files if they exist
+    if project.get("output_files"):
+        for output_file in project["output_files"]:
+            if Path(output_file).exists():
+                dest = export_dir / Path(output_file).name
+                shutil.copy(output_file, dest)
+                package.images.append(str(dest))
+    
+    # Create the zip package
+    zip_path = WORK_DIR / "exports" / f"{project_type}-{device_codename}-{project_id[:8]}.zip"
+    
+    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, dirs, files in os.walk(export_dir):
+            for file in files:
+                file_path = Path(root) / file
+                arcname = file_path.relative_to(export_dir)
+                zipf.write(file_path, arcname)
+    
+    package.package_path = str(zip_path)
+    package.package_size = zip_path.stat().st_size
+    
+    # Calculate checksum
+    import hashlib
+    sha256_hash = hashlib.sha256()
+    with open(zip_path, "rb") as f:
+        for byte_block in iter(lambda: f.read(4096), b""):
+            sha256_hash.update(byte_block)
+    package.checksum = sha256_hash.hexdigest()
+    
+    # Save package info
+    doc = package.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.export_packages.insert_one(doc)
+    
+    return package
+
+@api_router.get("/exports")
+async def list_exports(project_type: Optional[str] = None):
+    """List all export packages"""
+    query = {}
+    if project_type:
+        query["project_type"] = project_type
+    
+    exports = await db.export_packages.find(query, {"_id": 0}).sort("created_at", -1).to_list(50)
+    return {"exports": exports}
+
+@api_router.get("/exports/{export_id}/download")
+async def download_export(export_id: str):
+    """Download an export package"""
+    export = await db.export_packages.find_one({"id": export_id}, {"_id": 0})
+    if not export:
+        raise HTTPException(status_code=404, detail="Export not found")
+    
+    package_path = export.get("package_path")
+    if not package_path or not Path(package_path).exists():
+        raise HTTPException(status_code=404, detail="Export file not found")
+    
+    return FileResponse(
+        package_path,
+        media_type="application/zip",
+        filename=Path(package_path).name
+    )
+
+def generate_build_script(project: dict, project_type: str) -> str:
+    """Generate a complete build script for reproducibility"""
+    device = project.get("device_codename", "device")
+    
+    script = f'''#!/bin/bash
+# Auto-generated build script by Linux Device Forge
+# Device: {device}
+# Build Type: {project_type}
+# Generated: {datetime.now(timezone.utc).isoformat()}
+
+set -e
+
+echo "=== Linux Device Forge Build Script ==="
+echo "Device: {device}"
+echo "Type: {project_type}"
+echo ""
+
+# Source environment
+source ./build_env.sh
+
+'''
+    
+    if project_type == "android":
+        base_rom = project.get("base_rom", "lineageos")
+        android_ver = project.get("android_version", "14")
+        script += f'''
+# Android ROM Build Configuration
+BASE_ROM="{base_rom}"
+ANDROID_VERSION="{android_ver}"
+GAPPS="{project.get('gapps_type', 'none')}"
+ROOT="{project.get('root_solution', 'none')}"
+KERNEL="{project.get('kernel_type', 'stock')}"
+
+echo "Building $BASE_ROM Android $ANDROID_VERSION for {device}"
+
+# Initialize repo
+mkdir -p android && cd android
+repo init -u https://github.com/{base_rom}/{base_rom}.git -b lineage-$ANDROID_VERSION
+
+# Sync sources
+repo sync -c -j$(nproc) --force-sync
+
+# Set up environment
+source build/envsetup.sh
+breakfast {device}
+
+# Build
+mka bacon
+
+echo "Build complete! Output in out/target/product/{device}/"
+'''
+    
+    elif project_type == "kernel":
+        script += f'''
+# Kernel Build Configuration
+KERNEL_SOURCE="{project.get('source_url', '')}"
+DEFCONFIG="{project.get('defconfig', device + '_defconfig')}"
+ARCH="arm64"
+CROSS_COMPILE="aarch64-linux-gnu-"
+
+echo "Building kernel for {device}"
+
+# Clone kernel source
+git clone --depth=1 $KERNEL_SOURCE kernel
+cd kernel
+
+# Configure
+make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE $DEFCONFIG
+
+# Build
+make ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE -j$(nproc)
+
+echo "Kernel build complete!"
+'''
+    
+    elif project_type == "os":
+        distro = project.get("distro", "ubuntu")
+        script += f'''
+# OS Image Build Configuration
+DISTRO="{distro}"
+VERSION="{project.get('distro_version', 'latest')}"
+ARCH="arm64"
+
+echo "Building $DISTRO $VERSION for {device}"
+
+# Create rootfs
+mkdir -p rootfs
+debootstrap --arch=$ARCH $VERSION rootfs
+
+# Customize rootfs
+echo "{device}" > rootfs/etc/hostname
+
+# Create boot image
+# (requires kernel image)
+
+echo "OS image build complete!"
+'''
+    
+    elif project_type == "halium":
+        halium_ver = project.get("halium_version", "halium-11.0")
+        script += f'''
+# Halium Build Configuration
+HALIUM_VERSION="{halium_ver}"
+
+echo "Building Halium $HALIUM_VERSION for {device}"
+
+# Initialize Halium
+mkdir -p halium && cd halium
+repo init -u https://github.com/halium/android.git -b $HALIUM_VERSION
+
+# Add device repos to local manifest
+mkdir -p .repo/local_manifests
+
+# Sync
+repo sync -c -j$(nproc) --force-sync
+
+# Build
+source build/envsetup.sh
+breakfast {device}
+mka halium-boot
+mka systemimage
+
+echo "Halium build complete!"
+'''
+    
+    script += '''
+echo ""
+echo "=== Build Complete ==="
+echo "Check the output directory for built images"
+'''
+    
+    return script
+
+def generate_readme(project: dict, project_type: str) -> str:
+    """Generate README for the export package"""
+    device = project.get("device_codename", "device")
+    
+    readme = f'''# Linux Device Forge Export Package
+
+## Device: {device}
+## Build Type: {project_type.upper()}
+## Generated: {datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")}
+
+---
+
+## Contents
+
+- `build.sh` - Main build script to reproduce this build
+- `build_env.sh` - Environment variables for the build
+- `build_config.json` - Complete build configuration
+- `README.md` - This file
+
+## Quick Start
+
+```bash
+# Make scripts executable
+chmod +x build.sh build_env.sh
+
+# Run the build
+./build.sh
+```
+
+## Requirements
+
+'''
+    
+    if project_type == "android":
+        readme += '''
+- Ubuntu 20.04+ or similar Linux distro
+- 16GB+ RAM
+- 200GB+ free disk space
+- repo tool installed
+- Android build dependencies
+
+### Install dependencies (Ubuntu):
+```bash
+sudo apt-get install git-core gnupg flex bison build-essential zip curl \\
+    zlib1g-dev libc6-dev-i386 libncurses5 lib32ncurses5-dev \\
+    x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev \\
+    libxml2-utils xsltproc unzip fontconfig python3
+```
+'''
+    elif project_type == "kernel":
+        readme += '''
+- Linux build environment
+- Cross-compilation toolchain (aarch64-linux-gnu-gcc)
+- Git
+- Make, GCC
+
+### Install dependencies (Ubuntu):
+```bash
+sudo apt-get install build-essential gcc-aarch64-linux-gnu git
+```
+'''
+    elif project_type == "os":
+        readme += '''
+- Linux build environment
+- debootstrap (for Debian-based)
+- mkbootimg
+- Root access for some operations
+
+### Install dependencies (Ubuntu):
+```bash
+sudo apt-get install debootstrap qemu-user-static
+```
+'''
+    
+    readme += f'''
+
+## Build Configuration
+
+```json
+{json.dumps(project, indent=2, default=str)}
+```
+
+## Notes
+
+- This package was generated by Linux Device Forge
+- The build script is designed to be reproducible
+- Modify build_config.json to customize the build
+- Check the project documentation for device-specific instructions
+
+## Support
+
+For issues or questions, visit: https://github.com/halium/projectmanagement/issues
+
+---
+*Generated by Linux Device Forge v3.0*
+'''
+    
+    return readme
+
+def generate_env_file(project: dict, project_type: str) -> str:
+    """Generate environment variables file"""
+    device = project.get("device_codename", "device")
+    
+    env = f'''#!/bin/bash
+# Environment variables for {project_type} build
+# Device: {device}
+
+export DEVICE="{device}"
+export BUILD_TYPE="{project_type}"
+export ARCH="arm64"
+export CROSS_COMPILE="aarch64-linux-gnu-"
+
+# Build directories
+export BUILD_DIR="$(pwd)"
+export OUT_DIR="$BUILD_DIR/out"
+
+# Parallel jobs
+export JOBS=$(nproc)
+
+'''
+    
+    if project_type == "android":
+        env += f'''
+# Android specific
+export BASE_ROM="{project.get('base_rom', 'lineageos')}"
+export ANDROID_VERSION="{project.get('android_version', '14')}"
+export USE_CCACHE=1
+export CCACHE_DIR="$BUILD_DIR/.ccache"
+'''
+    elif project_type == "kernel":
+        env += f'''
+# Kernel specific
+export KERNEL_DIR="$BUILD_DIR/kernel"
+export DEFCONFIG="{project.get('defconfig', device + '_defconfig')}"
+'''
+    
+    return env
+
 # ======================= HALIUM ROUTES =======================
 
 @api_router.get("/halium/versions")
