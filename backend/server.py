@@ -190,42 +190,173 @@ INTERVIEW_DEPTHS = {
     }
 }
 
-# Root Solutions for Android/Kernel builds
+# Advanced Root Solutions for Android/Kernel builds
 ROOT_SOLUTIONS = {
     "none": {
         "name": "No Root",
         "description": "Standard Android without root access",
-        "kernel_patch": False
+        "category": "none",
+        "kernel_patch": False,
+        "difficulty": "easy"
     },
+    
+    # ========== MAGISK VARIANTS ==========
     "magisk": {
-        "name": "Magisk",
-        "description": "Systemless root with module support, SafetyNet bypass",
+        "name": "Magisk (Stable)",
+        "description": "Official Magisk - Systemless root with module ecosystem",
+        "category": "magisk",
         "kernel_patch": False,
         "install_method": "boot_patch",
-        "repo": "https://github.com/topjohnwu/Magisk"
+        "repo": "https://github.com/topjohnwu/Magisk",
+        "features": ["Systemless", "Modules", "MagiskHide (deprecated)", "Zygisk"],
+        "safetynet": "Basic bypass (deprecated in newer Android)",
+        "play_integrity": "Fails on newer devices",
+        "difficulty": "easy",
+        "recommended_for": "General users, module enthusiasts"
     },
     "magisk_delta": {
         "name": "Magisk Delta",
-        "description": "Magisk fork with additional hiding features",
+        "description": "Enhanced Magisk fork with advanced hiding & Zygisk improvements",
+        "category": "magisk",
         "kernel_patch": False,
         "install_method": "boot_patch",
-        "repo": "https://github.com/HuskyDG/magisk-files"
+        "repo": "https://github.com/HuskyDG/magisk-files",
+        "features": ["Enhanced Zygisk", "Better hiding", "Shamiko support", "DenyList++"],
+        "safetynet": "Good with Shamiko",
+        "play_integrity": "DEVICE integrity possible with Shamiko",
+        "difficulty": "easy",
+        "recommended_for": "Users needing better detection bypass"
     },
-    "kernelsu": {
-        "name": "KernelSU",
-        "description": "Kernel-based root, better hiding, module support",
+    "magisk_alpha": {
+        "name": "Magisk Alpha/Canary",
+        "description": "Bleeding-edge Magisk with experimental features",
+        "category": "magisk",
+        "kernel_patch": False,
+        "install_method": "boot_patch",
+        "repo": "https://github.com/topjohnwu/Magisk",
+        "features": ["Latest features", "Zygisk Next", "Experimental fixes"],
+        "safetynet": "Varies",
+        "play_integrity": "Experimental",
+        "difficulty": "medium",
+        "recommended_for": "Testers, developers"
+    },
+    
+    # ========== KERNELSU VARIANTS ==========
+    "kernelsu_standard": {
+        "name": "KernelSU (Standard)",
+        "description": "Standard KernelSU with KProbes - Best compatibility",
+        "category": "kernelsu",
         "kernel_patch": True,
         "install_method": "kernel_patch",
         "repo": "https://github.com/tiann/KernelSU",
         "kernel_configs": [
             "CONFIG_KPROBES=y",
             "CONFIG_HAVE_KPROBES=y",
-            "CONFIG_KPROBE_EVENTS=y"
-        ]
+            "CONFIG_KPROBE_EVENTS=y",
+            "CONFIG_MODULES=y",
+            "CONFIG_OVERLAY_FS=y"
+        ],
+        "features": ["Kernel-level root", "Better hiding", "Module support", "App profiles"],
+        "safetynet": "Excellent with proper setup",
+        "play_integrity": "DEVICE integrity achievable",
+        "difficulty": "medium",
+        "recommended_for": "Users with custom kernel support",
+        "patch_method": "kprobe"
+    },
+    "kernelsu_gki": {
+        "name": "KernelSU GKI",
+        "description": "KernelSU integrated directly into GKI kernel - No kprobes needed!",
+        "category": "kernelsu",
+        "kernel_patch": True,
+        "install_method": "kernel_integration",
+        "repo": "https://github.com/tiann/KernelSU",
+        "kernel_configs": [
+            "CONFIG_KSU=y",
+            "CONFIG_MODULES=y",
+            "CONFIG_OVERLAY_FS=y",
+            "# KPROBES NOT REQUIRED"
+        ],
+        "features": ["Fully integrated", "Best performance", "Hardest to detect", "LTS support"],
+        "safetynet": "Excellent",
+        "play_integrity": "STRONG integrity possible",
+        "difficulty": "hard",
+        "recommended_for": "GKI 2.0 kernels (Android 12+), advanced users",
+        "patch_method": "direct_integration",
+        "gki_version": "2.0",
+        "notes": "Integrates KernelSU source directly into kernel tree. Cleanest implementation."
+    },
+    "kernelsu_lkm": {
+        "name": "KernelSU LKM (Loadable Kernel Module)",
+        "description": "KernelSU as a loadable module - Most flexible",
+        "category": "kernelsu",
+        "kernel_patch": True,
+        "install_method": "kernel_module",
+        "repo": "https://github.com/tiann/KernelSU",
+        "kernel_configs": [
+            "CONFIG_MODULES=y",
+            "CONFIG_MODULE_UNLOAD=y",
+            "CONFIG_KPROBES=y"
+        ],
+        "features": ["Loadable/unloadable", "Easy updates", "Minimal kernel changes"],
+        "safetynet": "Good",
+        "play_integrity": "DEVICE integrity possible",
+        "difficulty": "medium",
+        "recommended_for": "Developers, testing environments",
+        "patch_method": "lkm"
+    },
+    "kernelsu_wild": {
+        "name": "Wild KernelSU",
+        "description": "Unofficial KernelSU variant with relaxed kernel requirements",
+        "category": "kernelsu",
+        "kernel_patch": True,
+        "install_method": "kernel_patch",
+        "repo": "https://github.com/Ylarod/KernelSU",
+        "kernel_configs": [
+            "# Minimal requirements",
+            "CONFIG_MODULES=y"
+        ],
+        "features": ["Works on older kernels", "Relaxed config checks", "Broader compatibility"],
+        "safetynet": "Good",
+        "play_integrity": "DEVICE integrity possible",
+        "difficulty": "medium",
+        "recommended_for": "Older devices, kernels without kprobe support",
+        "patch_method": "alternative",
+        "notes": "Less strict kernel version checks. Works on Android 5.0+ kernels."
+    },
+    "kernelsu_spoofed": {
+        "name": "KernelSU (Spoofed + SUSFS)",
+        "description": "KernelSU with SUSFS integration for maximum stealth",
+        "category": "kernelsu",
+        "kernel_patch": True,
+        "install_method": "kernel_patch_advanced",
+        "repo": "https://github.com/tiann/KernelSU",
+        "susfs_repo": "https://github.com/sidex15/SUSFS4KSU",
+        "kernel_configs": [
+            "CONFIG_KPROBES=y",
+            "CONFIG_HAVE_KPROBES=y",
+            "CONFIG_KPROBE_EVENTS=y",
+            "CONFIG_OVERLAY_FS=y",
+            "# SUSFS specific configs"
+        ],
+        "features": [
+            "SUSFS integration",
+            "File system hiding",
+            "Mount point spoofing",
+            "Enhanced stealth",
+            "Persistent spoofing"
+        ],
+        "safetynet": "Excellent",
+        "play_integrity": "STRONG integrity achievable",
+        "difficulty": "expert",
+        "recommended_for": "Banking apps, enterprise security bypass",
+        "patch_method": "kprobe_with_susfs",
+        "additional_patches": ["SUSFS"],
+        "notes": "SUSFS (Storage Umount/Suppress FS) hides root traces at filesystem level"
     },
     "kernelsu_next": {
         "name": "KernelSU Next",
-        "description": "Next-gen KernelSU with improved compatibility",
+        "description": "Community fork with experimental features",
+        "category": "kernelsu",
         "kernel_patch": True,
         "install_method": "kernel_patch",
         "repo": "https://github.com/rifsxd/KernelSU-Next",
@@ -233,20 +364,175 @@ ROOT_SOLUTIONS = {
             "CONFIG_KPROBES=y",
             "CONFIG_HAVE_KPROBES=y",
             "CONFIG_KPROBE_EVENTS=y"
-        ]
+        ],
+        "features": ["Experimental features", "Community driven", "Faster updates"],
+        "safetynet": "Good",
+        "play_integrity": "DEVICE integrity possible",
+        "difficulty": "medium",
+        "recommended_for": "Testing, experimental features",
+        "patch_method": "kprobe"
     },
+    
+    # ========== APATCH ==========
     "apatch": {
         "name": "APatch",
-        "description": "Android kernel patch root solution",
+        "description": "Kernel patch manager - Alternative to KernelSU",
+        "category": "apatch",
         "kernel_patch": True,
         "install_method": "kernel_patch",
-        "repo": "https://github.com/bmax121/APatch"
+        "repo": "https://github.com/bmax121/APatch",
+        "kernel_configs": [
+            "CONFIG_KALLSYMS=y",
+            "CONFIG_KALLSYMS_ALL=y"
+        ],
+        "features": ["Kernel patching", "Module support", "Lightweight", "Easy updates"],
+        "safetynet": "Good",
+        "play_integrity": "DEVICE integrity possible",
+        "difficulty": "medium",
+        "recommended_for": "Users wanting KernelSU alternative",
+        "patch_method": "apatch"
     },
+    
+    # ========== LEGACY ==========
     "supersu": {
         "name": "SuperSU",
-        "description": "Legacy root solution (deprecated)",
+        "description": "Legacy root solution (deprecated, not recommended)",
+        "category": "legacy",
         "kernel_patch": False,
-        "install_method": "system_install"
+        "install_method": "system_install",
+        "features": ["Old method", "No longer maintained"],
+        "safetynet": "Fails",
+        "play_integrity": "Fails",
+        "difficulty": "easy",
+        "recommended_for": "Old devices (Android 7 and below)",
+        "deprecated": True
+    }
+}
+
+# Advanced hiding/spoofing options
+ROOT_HIDING_MODULES = {
+    "shamiko": {
+        "name": "Shamiko",
+        "description": "Zygisk-based root hiding for Magisk Delta/Alpha",
+        "compatible_with": ["magisk_delta", "magisk_alpha"],
+        "repo": "https://github.com/LSPosed/LSPosed.github.io/releases",
+        "features": ["Hide Magisk", "DenyList enhancement", "Zygisk hiding"],
+        "effectiveness": "High",
+        "setup_difficulty": "Easy"
+    },
+    "susfs": {
+        "name": "SUSFS (Storage Umount Suppress FS)",
+        "description": "Advanced filesystem-level hiding for KernelSU",
+        "compatible_with": ["kernelsu_standard", "kernelsu_gki", "kernelsu_spoofed"],
+        "repo": "https://github.com/sidex15/SUSFS4KSU",
+        "features": [
+            "Hide mount points",
+            "Spoof /proc/mounts",
+            "Hide overlayfs",
+            "Persistent hiding"
+        ],
+        "effectiveness": "Very High",
+        "setup_difficulty": "Expert",
+        "kernel_patch_required": True
+    },
+    "zygisk_next": {
+        "name": "Zygisk Next",
+        "description": "Standalone Zygisk implementation",
+        "compatible_with": ["kernelsu_standard", "kernelsu_gki", "apatch"],
+        "repo": "https://github.com/Dr-TSNG/ZygiskNext",
+        "features": ["Zygisk on KernelSU", "Module support", "LSPosed compatible"],
+        "effectiveness": "High",
+        "setup_difficulty": "Medium"
+    },
+    "tricky_store": {
+        "name": "Tricky Store",
+        "description": "Play Integrity bypass using genuine keybox",
+        "compatible_with": ["magisk", "magisk_delta", "kernelsu_standard", "kernelsu_gki"],
+        "repo": "https://github.com/5ec1cff/TrickyStore",
+        "features": ["DEVICE/STRONG integrity", "Genuine keybox usage", "LSPosed integration"],
+        "effectiveness": "Very High",
+        "setup_difficulty": "Expert"
+    },
+    "lsposed": {
+        "name": "LSPosed",
+        "description": "Xposed framework for Zygisk",
+        "compatible_with": ["magisk", "magisk_delta", "kernelsu_standard", "kernelsu_gki"],
+        "repo": "https://github.com/LSPosed/LSPosed",
+        "features": ["Module framework", "App hooking", "Behavior modification"],
+        "effectiveness": "High",
+        "setup_difficulty": "Medium"
+    },
+    "magisk_hide_props": {
+        "name": "MagiskHide Props Config",
+        "description": "Device fingerprint spoofing",
+        "compatible_with": ["magisk", "magisk_delta"],
+        "repo": "https://github.com/Magisk-Modules-Repo/MagiskHidePropsConf",
+        "features": ["Spoof device fingerprint", "CTS profile", "SafetyNet bypass"],
+        "effectiveness": "Medium",
+        "setup_difficulty": "Easy"
+    }
+}
+
+# Kernel patch methods
+KERNEL_PATCH_METHODS = {
+    "kprobe": {
+        "name": "KProbes Method",
+        "description": "Uses kernel kprobes to hook functions dynamically",
+        "requirements": ["CONFIG_KPROBES=y", "CONFIG_KPROBE_EVENTS=y"],
+        "pros": ["No source modification", "Easy to update", "Most common"],
+        "cons": ["Slight performance overhead", "Requires kprobe support"],
+        "difficulty": "Medium"
+    },
+    "direct_integration": {
+        "name": "Direct Integration (GKI)",
+        "description": "Integrates KernelSU source directly into kernel tree",
+        "requirements": ["GKI 2.0 kernel", "Source code access"],
+        "pros": ["Best performance", "Hardest to detect", "Most stable"],
+        "cons": ["Requires kernel source", "Complex setup"],
+        "difficulty": "Expert",
+        "steps": [
+            "1. Download KernelSU source",
+            "2. Add to kernel/ksu directory",
+            "3. Modify kernel Makefile/Kconfig",
+            "4. Enable CONFIG_KSU=y",
+            "5. Compile kernel with integrated KSU"
+        ]
+    },
+    "lkm": {
+        "name": "Loadable Kernel Module",
+        "description": "Compile as separate .ko module",
+        "requirements": ["CONFIG_MODULES=y", "CONFIG_MODULE_UNLOAD=y"],
+        "pros": ["Easy updates", "Can be loaded/unloaded", "Minimal kernel changes"],
+        "cons": ["Slightly less integrated", "Requires module loading support"],
+        "difficulty": "Medium"
+    },
+    "alternative": {
+        "name": "Alternative/Wild Method",
+        "description": "Relaxed requirements for older kernels",
+        "requirements": ["Minimal - just CONFIG_MODULES=y"],
+        "pros": ["Works on old kernels", "Broad compatibility"],
+        "cons": ["Less features", "Community support"],
+        "difficulty": "Medium"
+    },
+    "kprobe_with_susfs": {
+        "name": "KProbe + SUSFS Integration",
+        "description": "Standard kprobe method with SUSFS patches applied",
+        "requirements": [
+            "CONFIG_KPROBES=y",
+            "CONFIG_OVERLAY_FS=y",
+            "SUSFS patches applied to kernel"
+        ],
+        "pros": ["Maximum stealth", "Filesystem-level hiding", "Best for banking apps"],
+        "cons": ["Complex setup", "Requires kernel patching", "Maintenance overhead"],
+        "difficulty": "Expert",
+        "steps": [
+            "1. Apply KernelSU patches",
+            "2. Apply SUSFS patches to fs/ directory",
+            "3. Enable required configs",
+            "4. Compile kernel",
+            "5. Flash KernelSU manager",
+            "6. Configure SUSFS via manager"
+        ]
     }
 }
 
