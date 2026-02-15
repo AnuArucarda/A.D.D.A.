@@ -1,0 +1,144 @@
+{
+  "design_guidelines": {
+    "project_name": "Halium Build Assistant",
+    "tone_and_voice": {
+      "personality": "The Architect's Console",
+      "emotional_adjectives": [
+        "Professional",
+        "Nostalgic",
+        "Precise",
+        "Hacker-Chic",
+        "Industrial"
+      ],
+      "visual_metaphor": "A modern cockpit for a Linux spaceship. Think 'Ubuntu Touch meets Cyberpunk 2077'."
+    },
+    "typography": {
+      "font_family_primary": "Ubuntu, sans-serif",
+      "font_family_secondary": "Inter, sans-serif",
+      "font_family_code": "'JetBrains Mono', 'Fira Code', monospace",
+      "scale": {
+        "h1": "text-4xl font-bold tracking-tight text-foreground",
+        "h2": "text-2xl font-semibold tracking-tight text-foreground/90",
+        "h3": "text-xl font-medium text-foreground/80",
+        "body": "text-base font-normal leading-relaxed text-foreground/70",
+        "small": "text-sm font-medium text-foreground/50",
+        "code": "text-sm font-mono bg-black/30 p-1 rounded text-orange-400"
+      },
+      "import_instructions": "Add to index.html: <link href=\"https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&family=JetBrains+Mono:wght@400;700&display=swap\" rel=\"stylesheet\">"
+    },
+    "colors": {
+      "palette": {
+        "background": "#1A1618",
+        "surface": "#2C2025",
+        "surface_highlight": "#3E2D34",
+        "primary": "#E95420",
+        "primary_foreground": "#FFFFFF",
+        "secondary": "#77216F",
+        "secondary_foreground": "#FFFFFF",
+        "accent": "#E95420",
+        "muted": "#5E2750",
+        "muted_foreground": "#AEA79F",
+        "border": "#3E2D34",
+        "terminal_bg": "#0A0A0A",
+        "terminal_text": "#38D878",
+        "success": "#0E8420",
+        "error": "#C7162B",
+        "warning": "#F99B11"
+      },
+      "usage_rules": {
+        "gradients": "Use subtle vertical gradients for backgrounds: 'bg-gradient-to-b from-[#2C001E] to-[#1A1618]'.",
+        "borders": "1px solid border-white/10 for cards. border-orange-500/50 for active states.",
+        "shadows": "shadow-[0_8px_30px_rgb(0,0,0,0.5)] for floating elements."
+      }
+    },
+    "layout_strategy": {
+      "grid_system": "Bento Grid Mode B (High Density)",
+      "container_style": "max-w-7xl mx-auto p-6",
+      "spacing_scale": "Relaxed spacing (p-6, p-8) for dashboard cards, Tight spacing (p-2) for terminal lines.",
+      "z_index_hierarchy": {
+        "base": "0",
+        "terminal": "10 (Sticky Bottom)",
+        "overlays": "50",
+        "modals": "100"
+      }
+    },
+    "components": {
+      "Button": {
+        "default": "bg-primary text-white rounded hover:bg-orange-600 transition-all font-ubuntu font-medium px-6 py-2 shadow-lg hover:shadow-orange-500/20",
+        "outline": "border border-white/20 hover:bg-white/5 text-white rounded px-6 py-2",
+        "ghost": "hover:bg-white/5 text-white/70 hover:text-white"
+      },
+      "Card": {
+        "base": "bg-surface/50 backdrop-blur-md border border-white/5 rounded-xl p-6 hover:border-white/10 transition-colors",
+        "active": "border-orange-500/50 bg-surface/80"
+      },
+      "Input": {
+        "base": "bg-black/20 border border-white/10 rounded focus:border-orange-500 focus:ring-1 focus:ring-orange-500 text-white placeholder:text-white/30 font-mono"
+      },
+      "Terminal": {
+        "wrapper": "bg-terminal_bg border-t border-white/10 font-mono text-sm p-4 h-64 overflow-y-auto custom-scrollbar",
+        "prompt": "text-orange-500 font-bold select-none mr-2",
+        "command": "text-green-400",
+        "output": "text-gray-300"
+      },
+      "Badge": {
+        "base": "px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider",
+        "variants": {
+          "success": "bg-green-900/30 text-green-400 border border-green-500/20",
+          "warning": "bg-yellow-900/30 text-yellow-400 border border-yellow-500/20",
+          "error": "bg-red-900/30 text-red-400 border border-red-500/20",
+          "neutral": "bg-white/10 text-white/60 border border-white/5"
+        }
+      }
+    },
+    "visual_enhancers": {
+      "texture": "Add a subtle 'noise' overlay to the main background to reduce digital banding and add an analog feel.",
+      "glow": "Use drop-shadow-[0_0_15px_rgba(233,84,32,0.3)] for active elements (The Ubuntu Glow).",
+      "animations": {
+        "hover": "transform hover:-translate-y-0.5 transition-transform duration-200",
+        "fade_in": "animate-in fade-in duration-500",
+        "slide_up": "animate-in slide-in-from-bottom-4 duration-500"
+      }
+    },
+    "image_assets": {
+      "hero_background": {
+        "url": "https://images.unsplash.com/photo-1771054931524-8c7c09dde0b8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzd8MHwxfHNlYXJjaHw0fHx1YnVudHUlMjBsaW51eCUyMGNvZGUlMjBhYnN0cmFjdCUyMHNlcnZlciUyMHJvb20lMjBhbmRyb2lkJTIwcGhvbmUlMjBkZXZlbG9wZXIlMjBkYXJrfGVufDB8fHx8MTc3MTEyNTU4MXww&ixlib=rb-4.1.0&q=85",
+        "usage": "Use as a subtle background pattern with low opacity (10%) and blend-mode-overlay."
+      },
+      "android_device": {
+        "url": "https://images.unsplash.com/photo-1756117921495-533bb54bcebc?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzd8MHwxfHNlYXJjaHwzfHx1YnVudHUlMjBsaW51eCUyMGNvZGUlMjBhYnN0cmFjdCUyMHNlcnZlciUyMHJvb20lMjBhbmRyb2lkJTIwcGhvbmUlMjBkZXZlbG9wZXIlMjBkYXJrfGVufDB8fHx8MTc3MTEyNTU4MXww&ixlib=rb-4.1.0&q=85",
+        "usage": "Use in the 'Device Connection' panel to represent the hardware interface."
+      }
+    },
+    "icons": {
+      "library": "lucide-react",
+      "style": "Stroke width 1.5px, crisp edges.",
+      "mapping": {
+        "terminal": "TerminalSquare",
+        "device": "Smartphone",
+        "build": "Hammer",
+        "settings": "Settings",
+        "logs": "ScrollText",
+        "firmware": "Cpu"
+      }
+    },
+    "instructions_to_main_agent": [
+      "1. SETUP: Install 'lucide-react' and 'framer-motion' immediately.",
+      "2. THEME: Apply the dark Aubergine theme globally in index.css. Do not use standard Tailwind grays; use the specific hex codes provided.",
+      "3. LAYOUT: Create a persistent 'Terminal Drawer' at the bottom of the screen that can be toggled (expanded/collapsed).",
+      "4. DASHBOARD: Implement a Bento Grid for the dashboard. Card 1: Connected Device (Large). Card 2: Build Status (Medium). Card 3: Recent Logs (Tall).",
+      "5. AI INTEGRATION: The AI chat interface should look like a chat bubbles BUT styled as code comments (gray text, monospaced font) to fit the developer aesthetic.",
+      "6. SKEUOMORPHISM: Add subtle 1px inner borders to cards to mimic 'etched glass' or 'machined metal'.",
+      "7. PROGRESS: Use block-based progress bars (e.g., [||||||....]) alongside standard smooth bars.",
+      "8. NOSTALGIA: Use the Ubuntu Orange (#E95420) for all primary actions and 'active' states. It is the signature color."
+    ],
+    "universal_guidelines": [
+      "Avoid 'AI slop' design - no generic gradients or rounded colorful blobs.",
+      "Use 'sonner' for toast notifications.",
+      "Ensure all interactive elements have data-testid attributes.",
+      "Use 'react-resizable-panels' if possible for the terminal/dashboard split.",
+      "Don't center everything. Use asymmetry.",
+      "Use 'clsx' and 'tailwind-merge' for class handling."
+    ]
+  }
+}
