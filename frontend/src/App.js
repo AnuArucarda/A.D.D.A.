@@ -448,6 +448,203 @@ const BinaryManagerModal = ({ show, onClose }) => {
   );
 };
 
+// ======================= BUILD COMPLEXITY SELECTOR =======================
+
+const BuildComplexitySelector = ({ selected, onSelect, toolType }) => {
+  const complexities = {
+    quick: {
+      icon: Zap,
+      name: "Quick Build",
+      description: "One-click build with smart defaults",
+      time: "5 min",
+      difficulty: "Beginner",
+      color: "green"
+    },
+    selective: {
+      icon: Sliders,
+      name: "Selective Build",
+      description: "Choose specific options manually",
+      time: "15-30 min",
+      difficulty: "Intermediate",
+      color: "blue"
+    },
+    ai_guided: {
+      icon: Bot,
+      name: "AI-Guided Build",
+      description: "Describe what you want, AI configures it",
+      time: "10 min",
+      difficulty: "Any Level",
+      color: "purple"
+    }
+  };
+
+  return (
+    <div className="grid grid-cols-3 gap-3 mb-4">
+      {Object.entries(complexities).map(([key, info]) => {
+        const Icon = info.icon;
+        const isSelected = selected === key;
+        return (
+          <motion.button key={key} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+            onClick={() => onSelect(key)}
+            className={`p-4 rounded-xl text-left transition-all ${
+              isSelected 
+                ? `bg-${info.color}-500/20 border-2 border-${info.color}-500/50` 
+                : "glass-card hover:border-white/20"
+            }`}>
+            <div className="flex items-center gap-2 mb-2">
+              <Icon className={`w-5 h-5 text-${info.color}-400`} />
+              <span className="font-semibold text-white text-sm">{info.name}</span>
+            </div>
+            <p className="text-xs text-white/50 mb-2">{info.description}</p>
+            <div className="flex items-center justify-between text-[10px]">
+              <Badge variant={info.difficulty === "Beginner" ? "success" : info.difficulty === "Intermediate" ? "warning" : "primary"}>
+                {info.difficulty}
+              </Badge>
+              <span className="text-white/40">{info.time}</span>
+            </div>
+          </motion.button>
+        );
+      })}
+    </div>
+  );
+};
+
+// ======================= AI ASSISTANT PANEL (Universal) =======================
+
+const AIAssistantPanel = ({ toolType, deviceInfo, onConfigGenerated }) => {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [sessionId] = useState(() => `ai-${toolType}-${Date.now()}`);
+
+  const sendMessage = async () => {
+    if (!input.trim()) return;
+    
+    const userMsg = { role: "user", content: input };
+    setMessages(prev => [...prev, userMsg]);
+    setInput("");
+    setIsLoading(true);
+
+    try {
+      const res = await axios.post(`${API}/ai/build-assistant`, {
+        session_id: sessionId,
+        message: input,
+        tool_type: toolType,
+        context: { device_info: deviceInfo }
+      });
+      
+      const aiMsg = { role: "assistant", content: res.data.response };
+      setMessages(prev => [...prev, aiMsg]);
+    } catch (e) {
+      toast.error("AI assistant error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const generateConfig = async () => {
+    if (!input.trim()) {
+      toast.error("Describe what you want to build");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      let res;
+      if (toolType === "kernel") {
+        res = await axios.post(`${API}/ai/generate-kernel-config`, {
+          description: input,
+          device_info: deviceInfo
+        });
+        onConfigGenerated(res.data.config);
+        toast.success("Kernel config generated!");
+      } else if (toolType === "os") {
+        res = await axios.post(`${API}/ai/recommend-os`, {
+          description: input,
+          device_info: deviceInfo
+        });
+        onConfigGenerated(res.data.recommendation);
+        toast.success("OS recommendation ready!");
+      }
+      
+      const aiMsg = { 
+        role: "assistant", 
+        content: `✅ Generated configuration based on: "${input}"\n\nCheck the main panel for details!`
+      };
+      setMessages(prev => [...prev, { role: "user", content: input }, aiMsg]);
+      setInput("");
+    } catch (e) {
+      toast.error("Failed to generate config");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="glass-card rounded-xl p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Bot className="w-5 h-5 text-purple-400" />
+        <h3 className="font-semibold text-white">AI Assistant</h3>
+        <Badge variant="primary" className="text-[9px]">Context-Aware</Badge>
+      </div>
+
+      {/* Chat Messages */}
+      <div className="bg-black/30 rounded-lg p-3 mb-3 max-h-64 overflow-y-auto space-y-2">
+        {messages.length === 0 ? (
+          <div className="text-center text-white/40 text-sm py-4">
+            <Bot className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <p>Describe what you want to build in natural language</p>
+            <p className="text-xs mt-1">Example: "I want maximum battery life and Docker support"</p>
+          </div>
+        ) : (
+          messages.map((msg, i) => (
+            <div key={i} className={`p-2 rounded ${msg.role === "user" ? "bg-blue-500/20 ml-8" : "bg-purple-500/20 mr-8"}`}>
+              <span className="text-xs font-semibold text-white/70">{msg.role === "user" ? "You" : "AI"}</span>
+              <p className="text-sm text-white whitespace-pre-wrap">{msg.content}</p>
+            </div>
+          ))
+        )}
+        {isLoading && (
+          <div className="flex items-center gap-2 text-white/50">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-sm">AI is thinking...</span>
+          </div>
+        )}
+      </div>
+
+      {/* Input */}
+      <div className="space-y-2">
+        <textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && e.ctrlKey) {
+              sendMessage();
+            }
+          }}
+          placeholder="Describe what you want... (Ctrl+Enter to send)"
+          className="input-dark w-full text-sm resize-none"
+          rows={2}
+        />
+        <div className="flex gap-2">
+          <button onClick={sendMessage} disabled={isLoading || !input.trim()}
+            className="btn-outline flex-1 text-sm">
+            <MessageSquare className="w-4 h-4 mr-1" /> Chat
+          </button>
+          <button onClick={generateConfig} disabled={isLoading || !input.trim()}
+            className="btn-primary flex-1 text-sm">
+            <Sparkles className="w-4 h-4 mr-1" /> Generate Config
+          </button>
+        </div>
+      </div>
+
+      <p className="text-[10px] text-white/30 mt-2 text-center">
+        AI understands {toolType} building and your device context
+      </p>
+    </div>
+  );
+};
+
 // ======================= DEVICE PANEL =======================
 
 const DevicePanel = ({ device, deviceInfo, onRefresh, onSelect }) => {
