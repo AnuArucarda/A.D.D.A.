@@ -3197,6 +3197,69 @@ async def list_recipes_in_repository(
     )
     return {"recipes": recipes, "count": len(recipes)}
 
+# ======================= WEBSOCKET FOR BUILD LOGS =======================
+
+@app.websocket("/ws/build/{build_id}")
+async def websocket_build_logs(websocket: WebSocket, build_id: str):
+    """WebSocket endpoint for real-time build logs"""
+    await websocket.accept()
+    
+    try:
+        # Send initial connection message
+        await websocket.send_json({
+            "type": "connected",
+            "build_id": build_id,
+            "message": "Connected to build log stream"
+        })
+        
+        # Define log callback that sends to websocket
+        async def send_log(message: str):
+            await websocket.send_json({
+                "type": "log",
+                "message": message,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
+        
+        # Wait for build start message from client
+        data = await websocket.receive_json()
+        
+        if data.get("action") == "start_build":
+            project_data = data.get("project")
+            build_type = data.get("build_type", "kernel")
+            
+            # Start appropriate build
+            success = False
+            if build_type == "kernel":
+                success = await build_orchestrator.build_kernel(project_data, send_log)
+            elif build_type == "os":
+                success = await build_orchestrator.build_os_image(project_data, send_log)
+            elif build_type == "android":
+                success = await build_orchestrator.build_android_rom(project_data, send_log)
+            elif build_type == "recovery":
+                success = await build_orchestrator.build_recovery(
+                    project_data.get("device_codename"),
+                    project_data.get("recovery_type"),
+                    send_log
+                )
+            
+            # Send completion message
+            await websocket.send_json({
+                "type": "complete",
+                "success": success,
+                "message": "Build completed successfully!" if success else "Build failed"
+            })
+        
+    except WebSocketDisconnect:
+        logger.info(f"WebSocket disconnected for build {build_id}")
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
+        await websocket.send_json({
+            "type": "error",
+            "message": str(e)
+        })
+    finally:
+        await websocket.close()
+
 # ======================= APP SETUP =======================
 
 # Add CORS
