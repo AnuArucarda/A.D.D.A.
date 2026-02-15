@@ -994,6 +994,12 @@ const RecoveryBuilderPanel = ({ deviceInfo }) => {
   const [loading, setLoading] = useState(false);
   const [rootSolution, setRootSolution] = useState("none");
   const [rootSolutions, setRootSolutions] = useState({});
+  const [organizedRoots, setOrganizedRoots] = useState({});
+  const [hidingModules, setHidingModules] = useState({});
+  const [selectedHiding, setSelectedHiding] = useState([]);
+  const [patchMethod, setPatchMethod] = useState("kprobe");
+  const [patchMethods, setPatchMethods] = useState({});
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => {
     fetchRecoveryTypes();
@@ -1012,6 +1018,9 @@ const RecoveryBuilderPanel = ({ deviceInfo }) => {
     try {
       const res = await axios.get(`${API}/root/solutions`);
       setRootSolutions(res.data.solutions);
+      setOrganizedRoots(res.data.organized);
+      setHidingModules(res.data.hiding_modules);
+      setPatchMethods(res.data.patch_methods);
     } catch (e) {}
   };
 
@@ -1040,6 +1049,16 @@ const RecoveryBuilderPanel = ({ deviceInfo }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const currentRoot = rootSolutions[rootSolution] || {};
+  const requiresKernelPatch = currentRoot.kernel_patch;
+  const currentMethod = patchMethods[patchMethod] || {};
+
+  const toggleHiding = (module) => {
+    setSelectedHiding(prev => 
+      prev.includes(module) ? prev.filter(m => m !== module) : [...prev, module]
+    );
   };
 
   return (
@@ -1071,22 +1090,122 @@ const RecoveryBuilderPanel = ({ deviceInfo }) => {
       </div>
 
       <div className="glass-card rounded-xl p-5">
-        <h3 className="font-semibold text-white flex items-center gap-2 mb-4">
-          <Shield className="w-4 h-4 text-[#E95420]" /> Root Integration (Optional)
-        </h3>
-        <div className="space-y-2">
-          <select value={rootSolution} onChange={(e) => setRootSolution(e.target.value)}
-            className="input-dark w-full text-sm">
-            {Object.entries(rootSolutions).map(([key, info]) => (
-              <option key={key} value={key}>{info.name} - {info.description}</option>
-            ))}
-          </select>
-          {rootSolution !== "none" && rootSolutions[rootSolution] && (
-            <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-              <p className="text-xs text-blue-300">
-                {rootSolutions[rootSolution].kernel_patch ? "⚠️ Requires kernel patch" : "✓ Boot image patch"}
-              </p>
-            </div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-white flex items-center gap-2">
+            <Shield className="w-4 h-4 text-[#E95420]" /> Root Integration
+          </h3>
+          <button onClick={() => setShowAdvanced(!showAdvanced)} className="text-xs text-[#E95420]">
+            {showAdvanced ? "Hide" : "Show"} Advanced Options
+          </button>
+        </div>
+        
+        <div className="space-y-4">
+          {/* Root Solution Selection by Category */}
+          {Object.entries(organizedRoots).map(([category, solutions]) => {
+            if (Object.keys(solutions).length === 0 || category === 'none') return null;
+            return (
+              <div key={category}>
+                <label className="text-xs font-semibold text-white/70 mb-2 block uppercase">{category}</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(solutions).map(([key, info]) => (
+                    <button key={key} onClick={() => setRootSolution(key)}
+                      className={`p-2 rounded-lg text-left text-xs ${rootSolution === key ? "bg-[#E95420]/20 border border-[#E95420]/50" : "bg-black/20 border border-white/5"}`}>
+                      <div className="font-medium text-white">{info.name}</div>
+                      {info.difficulty && <Badge variant={info.difficulty === 'easy' ? 'success' : info.difficulty === 'medium' ? 'warning' : 'error'} className="text-[8px] mt-1">{info.difficulty}</Badge>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Advanced Options */}
+          {showAdvanced && rootSolution !== "none" && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-4">
+              
+              {/* Kernel Patch Method (for kernel-based root) */}
+              {requiresKernelPatch && (
+                <div>
+                  <label className="text-xs text-white/50 mb-2 block">Kernel Patch Method</label>
+                  <select value={patchMethod} onChange={(e) => setPatchMethod(e.target.value)}
+                    className="input-dark w-full text-xs">
+                    {Object.entries(patchMethods).map(([key, method]) => (
+                      <option key={key} value={key}>{method.name} - {method.difficulty}</option>
+                    ))}
+                  </select>
+                  {currentMethod.description && (
+                    <p className="text-[10px] text-white/40 mt-1">{currentMethod.description}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Hiding/Spoofing Modules */}
+              {rootSolution !== "none" && Object.keys(hidingModules).length > 0 && (
+                <div>
+                  <label className="text-xs text-white/50 mb-2 block">Hiding/Spoofing Modules (Optional)</label>
+                  <div className="space-y-2">
+                    {Object.entries(hidingModules).map(([key, module]) => {
+                      const isCompatible = module.compatible_with.includes(rootSolution);
+                      const isSelected = selectedHiding.includes(key);
+                      
+                      if (!isCompatible) return null;
+                      
+                      return (
+                        <div key={key} 
+                          onClick={() => isCompatible && toggleHiding(key)}
+                          className={`p-3 rounded-lg cursor-pointer transition-all ${
+                            isSelected ? "bg-green-500/20 border border-green-500/50" : "bg-black/20 border border-white/5"
+                          } ${!isCompatible && "opacity-50 cursor-not-allowed"}`}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-semibold text-white">{module.name}</span>
+                            <div className="flex items-center gap-2">
+                              {module.kernel_patch_required && <Badge variant="warning" className="text-[8px]">Kernel Patch</Badge>}
+                              <Badge variant={module.effectiveness === 'Very High' ? 'success' : 'neutral'} className="text-[8px]">{module.effectiveness}</Badge>
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-white/40">{module.description}</p>
+                          {module.features && (
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {module.features.slice(0, 3).map((feat, i) => (
+                                <span key={i} className="text-[9px] bg-white/5 px-2 py-0.5 rounded">{feat}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Info about selected root */}
+              {currentRoot.safetynet && (
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="p-2 bg-black/20 rounded">
+                    <span className="text-white/40">SafetyNet:</span>
+                    <p className="text-white font-medium">{currentRoot.safetynet}</p>
+                  </div>
+                  <div className="p-2 bg-black/20 rounded">
+                    <span className="text-white/40">Play Integrity:</span>
+                    <p className="text-white font-medium">{currentRoot.play_integrity}</p>
+                  </div>
+                </div>
+              )}
+
+              {currentRoot.recommended_for && (
+                <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                  <p className="text-xs text-blue-300">
+                    <Info className="w-3 h-3 inline mr-1" />
+                    Recommended for: {currentRoot.recommended_for}
+                  </p>
+                </div>
+              )}
+
+            </motion.div>
+          )}
+
+          {rootSolution !== "none" && !showAdvanced && currentRoot.description && (
+            <p className="text-xs text-white/60">{currentRoot.description}</p>
           )}
         </div>
       </div>
@@ -1095,7 +1214,13 @@ const RecoveryBuilderPanel = ({ deviceInfo }) => {
         <button onClick={startBuild} disabled={!deviceInfo || loading} className="btn-primary w-full flex items-center justify-center gap-2">
           {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Rocket className="w-5 h-5" />}
           Build {recoveries[selectedRecovery]?.name || "Recovery"}
+          {rootSolution !== "none" && ` + ${rootSolutions[rootSolution]?.name}`}
         </button>
+        {selectedHiding.length > 0 && (
+          <p className="text-[10px] text-white/40 mt-2 text-center">
+            With {selectedHiding.length} hiding module{selectedHiding.length > 1 ? 's' : ''}
+          </p>
+        )}
       </div>
 
       {builds.length > 0 && (
