@@ -1749,6 +1749,162 @@ export DEFCONFIG="{project.get('defconfig', device + '_defconfig')}"
 
 @api_router.get("/halium/versions")
 async def get_halium_versions():
+    """Get available Halium versions"""
+    versions = []
+    for key, info in HALIUM_VERSIONS.items():
+        versions.append({
+            "id": key,
+            "name": key.replace("-", " ").title(),
+            "android_base": f"Android {info['android']}",
+            "lineage_base": f"LineageOS {info['lineage']}",
+            "status": "latest" if key == "halium-11.0" else "stable"
+        })
+    return {"versions": versions}
+
+@api_router.get("/halium/builds")
+async def list_halium_builds():
+    """List all Halium builds"""
+    builds = await db.halium_builds.find({}, {"_id": 0}).sort("created_at", -1).to_list(50)
+    return {"builds": builds}
+
+@api_router.post("/halium/build")
+async def start_halium_build(request: dict, background_tasks: BackgroundTasks):
+    """Start a Halium build"""
+    device_serial = request.get("device_serial")
+    halium_version = request.get("halium_version", "halium-11.0")
+    
+    # Get device info
+    if device_serial:
+        device_info = await get_full_device_info(device_serial)
+        device_codename = device_info.codename or device_info.device
+    else:
+        device_codename = request.get("device_codename", "unknown")
+    
+    # Create build record
+    build_id = str(uuid.uuid4())
+    build_doc = {
+        "id": build_id,
+        "device_codename": device_codename,
+        "halium_version": halium_version,
+        "status": "building",
+        "progress": 0,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.halium_builds.insert_one(build_doc)
+    
+    return {"build_id": build_id, "status": "started", "message": "Halium build initiated"}
+
+# ======================= RECOVERY BUILDER ROUTES =======================
+
+@api_router.get("/recovery/types")
+async def get_recovery_types():
+    """Get available custom recovery types"""
+    return {"recoveries": CUSTOM_RECOVERIES}
+
+@api_router.post("/recovery/build")
+async def start_recovery_build(request: dict, background_tasks: BackgroundTasks):
+    """Start building a custom recovery"""
+    device_codename = request.get("device_codename")
+    recovery_type = request.get("recovery_type", "twrp")
+    
+    if not device_codename:
+        raise HTTPException(status_code=400, detail="device_codename required")
+    
+    if recovery_type not in CUSTOM_RECOVERIES:
+        raise HTTPException(status_code=400, detail=f"Invalid recovery type. Choose from: {list(CUSTOM_RECOVERIES.keys())}")
+    
+    # Create build record
+    build_id = str(uuid.uuid4())
+    build_doc = {
+        "id": build_id,
+        "device_codename": device_codename,
+        "recovery_type": recovery_type,
+        "status": "building",
+        "progress": 0,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.recovery_builds.insert_one(build_doc)
+    
+    # Start build in background
+    # background_tasks.add_task(build_orchestrator.build_recovery, device_codename, recovery_type)
+    
+    return {
+        "build_id": build_id,
+        "status": "started",
+        "recovery": CUSTOM_RECOVERIES[recovery_type]["full_name"],
+        "device": device_codename
+    }
+
+@api_router.get("/recovery/builds")
+async def list_recovery_builds():
+    """List all recovery builds"""
+    builds = await db.recovery_builds.find({}, {"_id": 0}).sort("created_at", -1).to_list(50)
+    return {"builds": builds}
+
+@api_router.get("/recovery/builds/{build_id}")
+async def get_recovery_build(build_id: str):
+    """Get specific recovery build details"""
+    build = await db.recovery_builds.find_one({"id": build_id}, {"_id": 0})
+    if not build:
+        raise HTTPException(status_code=404, detail="Build not found")
+    return build
+
+# ======================= ROOT INTEGRATION ROUTES =======================
+
+@api_router.get("/root/solutions")
+async def get_root_solutions():
+    """Get available root solutions"""
+    return {"solutions": ROOT_SOLUTIONS}
+
+@api_router.post("/root/integrate")
+async def integrate_root_solution(request: dict):
+    """Integrate root solution into kernel or ROM"""
+    project_id = request.get("project_id")
+    project_type = request.get("project_type")  # kernel, android, os
+    root_solution = request.get("root_solution", "magisk")
+    
+    if not project_id or not project_type:
+        raise HTTPException(status_code=400, detail="project_id and project_type required")
+    
+    if root_solution not in ROOT_SOLUTIONS:
+        raise HTTPException(status_code=400, detail=f"Invalid root solution. Choose from: {list(ROOT_SOLUTIONS.keys())}")
+    
+    # Get project
+    collection_map = {
+        "kernel": db.kernel_projects,
+        "android": db.android_projects,
+        "os": db.os_image_projects
+    }
+    
+    collection = collection_map.get(project_type)
+    if not collection:
+        raise HTTPException(status_code=400, detail="Invalid project type")
+    
+    project = await collection.find_one({"id": project_id})
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    # Update project with root solution
+    await collection.update_one(
+        {"id": project_id},
+        {"$set": {
+            "root_solution": root_solution,
+            "root_integrated": True,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    solution_info = ROOT_SOLUTIONS[root_solution]
+    
+    return {
+        "success": True,
+        "message": f"{solution_info['name']} will be integrated into the build",
+        "requires_kernel_patch": solution_info.get("kernel_patch", False),
+        "install_method": solution_info.get("install_method", "boot_patch")
+    }
+async def get_halium_versions():
     versions = []
     for vid, info in HALIUM_VERSIONS.items():
         versions.append({
