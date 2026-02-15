@@ -1,6 +1,6 @@
 {
   "timestamp": "2026-02-15T04:02:19.393542",
-  "backend_url": "https://linux-on-android-1.preview.emergentagent.com",
+  "backend_url": "https://device-agent.preview.emergentagent.com",
   "tests": [
     {
       "name": "GET /health - Get tools status including kernel_forge_ready and os_builder_ready",
