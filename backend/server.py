@@ -32,6 +32,7 @@ from build_presets import get_presets_for_tool, apply_preset_to_project
 from ai_provider_manager import ai_provider_manager
 from device_manager import device_manager
 from build_history_manager import BuildHistoryManager
+from factory_image_manager import factory_image_manager
 
 # MongoDB connection
 mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
@@ -2984,6 +2985,113 @@ async def apply_build_preset(tool_type: str, request: ApplyPresetRequest):
     """Apply a preset to a configuration"""
     config = apply_preset_to_project(request.preset_id, tool_type, request.base_config)
     return {"configuration": config}
+
+# ======================= FACTORY IMAGE MANAGEMENT =======================
+
+@api_router.get("/factory-images/manufacturers")
+async def get_manufacturer_sources():
+    """Get list of known manufacturer image sources"""
+    sources = factory_image_manager.get_manufacturer_sources()
+    return {"manufacturers": sources}
+
+class FactoryImageUploadRequest(BaseModel):
+    file_path: str
+    device_codename: str
+    metadata: Optional[Dict] = None
+
+@api_router.post("/factory-images/upload")
+async def upload_factory_image(request: FactoryImageUploadRequest):
+    """Upload a factory image file"""
+    try:
+        result = await factory_image_manager.upload_factory_image(
+            request.file_path,
+            request.device_codename,
+            request.metadata
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class FactoryImageDownloadRequest(BaseModel):
+    url: str
+    device_codename: str
+    manufacturer: Optional[str] = None
+
+@api_router.post("/factory-images/download")
+async def download_factory_image(request: FactoryImageDownloadRequest):
+    """Download factory image from URL"""
+    try:
+        result = await factory_image_manager.download_factory_image(
+            request.url,
+            request.device_codename,
+            request.manufacturer
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class AutoDetectImagesRequest(BaseModel):
+    device_info: Dict
+
+@api_router.post("/factory-images/auto-detect")
+async def auto_detect_and_download_images(request: AutoDetectImagesRequest):
+    """Auto-detect device and download factory images"""
+    result = await factory_image_manager.auto_detect_and_download(request.device_info)
+    return result
+
+@api_router.get("/factory-images/uploaded")
+async def get_uploaded_images():
+    """Get all uploaded factory images"""
+    images = factory_image_manager.get_uploaded_images()
+    return {"images": images}
+
+@api_router.post("/factory-images/{device_codename}/extract")
+async def extract_factory_image(device_codename: str):
+    """Extract and analyze factory image"""
+    try:
+        result = await factory_image_manager.extract_factory_image(device_codename)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/factory-images/{device_codename}/extracted")
+async def get_extracted_data(device_codename: str):
+    """Get extracted factory image data"""
+    data = factory_image_manager.get_extracted_data(device_codename)
+    if not data:
+        raise HTTPException(status_code=404, detail="No extracted data found")
+    return data
+
+class ExtractBootImageRequest(BaseModel):
+    boot_image_path: str
+
+@api_router.post("/factory-images/extract-boot")
+async def extract_boot_image_components(request: ExtractBootImageRequest):
+    """Extract kernel, ramdisk, and device tree from boot.img"""
+    try:
+        components = await factory_image_manager.extract_boot_image_components(
+            request.boot_image_path
+        )
+        return components
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class ExtractKernelConfigRequest(BaseModel):
+    kernel_image_path: str
+
+@api_router.post("/factory-images/extract-kernel-config")
+async def extract_kernel_config(request: ExtractKernelConfigRequest):
+    """Extract kernel configuration from kernel image"""
+    try:
+        config = await factory_image_manager.extract_kernel_config(
+            request.kernel_image_path
+        )
+        if config:
+            return {"config": config}
+        else:
+            return {"error": "Failed to extract kernel config"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ======================= APP SETUP =======================
 
