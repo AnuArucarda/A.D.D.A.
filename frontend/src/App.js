@@ -111,6 +111,117 @@ const DistroCard = ({ distro, info, selected, onSelect }) => (
   </motion.div>
 );
 
+// ======================= BINARY MANAGER MODAL =======================
+
+const BinaryManagerModal = ({ show, onClose }) => {
+  const [binaries, setBinaries] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [installing, setInstalling] = useState(null);
+
+  useEffect(() => {
+    if (show) {
+      fetchBinaries();
+    }
+  }, [show]);
+
+  const fetchBinaries = async () => {
+    try {
+      const res = await axios.get(`${API}/binaries/status`);
+      setBinaries(res.data.binaries);
+    } catch (e) {
+      toast.error("Failed to fetch binary status");
+    }
+  };
+
+  const installBinary = async (name) => {
+    setInstalling(name);
+    try {
+      const res = await axios.post(`${API}/binaries/${name}/install`);
+      toast.success(res.data.message);
+      fetchBinaries();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Installation failed");
+    } finally {
+      setInstalling(null);
+    }
+  };
+
+  if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={onClose}>
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+        onClick={(e) => e.stopPropagation()}
+        className="glass-card rounded-2xl p-6 max-w-3xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+        
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <Settings className="w-6 h-6 text-[#E95420]" />
+            Binary Manager
+          </h2>
+          <button onClick={onClose} className="text-white/50 hover:text-white">
+            <XCircle className="w-6 h-6" />
+          </button>
+        </div>
+
+        <p className="text-sm text-white/60 mb-6">
+          Required build tools and their status. Install missing binaries or configure custom paths.
+        </p>
+
+        <div className="space-y-3">
+          {Object.entries(binaries).map(([name, info]) => (
+            <div key={name} className="p-4 bg-black/30 rounded-xl border border-white/5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                  info.available ? "bg-green-500/20" : "bg-red-500/20"
+                }`}>
+                  {info.available ? (
+                    <CheckCircle2 className="w-5 h-5 text-green-400" />
+                  ) : (
+                    <XOctagon className="w-5 h-5 text-red-400" />
+                  )}
+                </div>
+                <div>
+                  <span className="font-mono text-white font-medium">{name}</span>
+                  {info.path && (
+                    <p className="text-xs text-white/40 font-mono">{info.path}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {info.available ? (
+                  <Badge variant="success">Installed</Badge>
+                ) : info.can_auto_install ? (
+                  <button 
+                    onClick={() => installBinary(name)}
+                    disabled={installing === name}
+                    className="px-3 py-1.5 rounded-lg bg-[#E95420] text-white text-sm font-medium flex items-center gap-2 hover:bg-[#E95420]/90 disabled:opacity-50">
+                    {installing === name ? (
+                      <><Loader2 className="w-3 h-3 animate-spin" /> Installing...</>
+                    ) : (
+                      <><Download className="w-3 h-3" /> Install</>
+                    )}
+                  </button>
+                ) : (
+                  <Badge variant="error">Manual Install Required</Badge>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
+          <p className="text-sm text-blue-300">
+            <Info className="w-4 h-4 inline mr-1" />
+            Binaries are detected from system PATH or downloaded to /tmp/linux_forge/binaries/
+          </p>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
 // ======================= DEVICE PANEL =======================
 
 const DevicePanel = ({ device, deviceInfo, onRefresh, onSelect }) => {
@@ -1040,6 +1151,8 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen flex flex-col" data-testid="dashboard">
+      <BinaryManagerModal show={showBinaryManager} onClose={() => setShowBinaryManager(false)} />
+      
       <header className="px-6 py-4 border-b border-white/5 bg-gradient-to-r from-[#2C001E]/50 to-transparent">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Logo />
