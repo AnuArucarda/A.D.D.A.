@@ -2004,6 +2004,50 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
             elif data.get("type") == "ai_message":
                 contexts = {"Device": data.get("device_context"), "Kernel": data.get("kernel_context")}
                 response = await ai_agent.send_message(session_id, data.get("message", ""), contexts)
+                await websocket.send_json({"type": "response", "message": response})
+    
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, session_id)
+
+# ======================= LOCAL APP COMPILATION =======================
+
+@api_router.post("/export/local-app")
+async def export_local_app(request: dict):
+    """Generate a local app package for the user's OS"""
+    target_os = request.get("os", platform.system().lower())
+    
+    return {
+        "success": True,
+        "message": f"Local app export for {target_os} is under development",
+        "instructions": "For now, you can run the app locally by cloning the repository and using Docker or running backend/frontend separately"
+    }
+
+# ======================= APP SETUP =======================
+
+# Add CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
+
+# Mount the API router
+app.include_router(api_router)
+
+@app.get("/")
+async def root():
+    return {
+        "app": "Linux Device Forge",
+        "version": "3.0.0",
+        "status": "running",
+        "features": ["Kernel Forge", "OS Builder", "Android ROM Builder", "Halium", "Recovery Builder", "Binary Management"]
+    }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8001)
                 commands = ai_agent.extract_commands(response)
                 await websocket.send_json({"type": "ai_response", "response": response, "commands": commands})
     
