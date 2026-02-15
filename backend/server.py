@@ -2718,6 +2718,273 @@ async def get_ai_capabilities():
         }
     }
 
+# ======================= AI PROVIDER MANAGEMENT =======================
+
+@api_router.get("/ai-providers")
+async def get_ai_providers():
+    """Get all available AI providers"""
+    return {
+        "providers": ai_provider_manager.get_all_providers(),
+        "default_provider": ai_provider_manager.default_provider
+    }
+
+@api_router.get("/ai-providers/{provider}/info")
+async def get_provider_info(provider: str):
+    """Get detailed information about a specific provider"""
+    info = ai_provider_manager.get_provider_info(provider)
+    if not info:
+        raise HTTPException(status_code=404, detail="Provider not found")
+    
+    is_ready, status_msg = ai_provider_manager.is_provider_ready(provider)
+    
+    return {
+        **info,
+        "is_ready": is_ready,
+        "status_message": status_msg
+    }
+
+@api_router.post("/ai-providers/{provider}/set-credential")
+async def set_provider_credential(provider: str, api_key: str):
+    """Set API key for a provider"""
+    success = ai_provider_manager.set_credential(provider, api_key)
+    if not success:
+        raise HTTPException(status_code=404, detail="Provider not found")
+    
+    return {"success": True, "message": f"Credential set for {provider}"}
+
+@api_router.get("/ai-providers/{provider}/status")
+async def check_provider_status(provider: str):
+    """Check if a provider is ready to use"""
+    is_ready, message = ai_provider_manager.is_provider_ready(provider)
+    return {
+        "provider": provider,
+        "is_ready": is_ready,
+        "message": message
+    }
+
+class AIMessageRequest(BaseModel):
+    provider: str
+    model: str
+    message: str
+    system_prompt: Optional[str] = None
+    context: Optional[List[Dict]] = None
+
+@api_router.post("/ai-providers/send-message")
+async def send_ai_message(request: AIMessageRequest):
+    """Send a message to any AI provider"""
+    try:
+        response = await ai_provider_manager.send_message(
+            provider=request.provider,
+            model=request.model,
+            message=request.message,
+            system_prompt=request.system_prompt,
+            context=request.context
+        )
+        return {"response": response}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ======================= DEVICE MANAGEMENT =======================
+
+@api_router.get("/devices/connected")
+async def get_connected_devices():
+    """Get all connected Android devices"""
+    devices = await device_manager.get_connected_devices()
+    return {"devices": devices, "count": len(devices)}
+
+@api_router.get("/devices/{serial}/details")
+async def get_device_details(serial: str):
+    """Get detailed information about a specific device"""
+    device_info = await device_manager.get_device_info(serial)
+    return device_info
+
+@api_router.post("/devices/{serial}/reboot")
+async def reboot_device(serial: str, mode: str = "system"):
+    """Reboot device to different modes (system, recovery, bootloader)"""
+    success = await device_manager.reboot_device(serial, mode)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to reboot device")
+    return {"success": True, "message": f"Device rebooting to {mode}"}
+
+class FlashImageRequest(BaseModel):
+    partition: str
+    image_path: str
+
+@api_router.post("/devices/{serial}/flash")
+async def flash_image(serial: str, request: FlashImageRequest):
+    """Flash an image to a device partition"""
+    success, message = await device_manager.flash_image(
+        serial, request.partition, request.image_path
+    )
+    if not success:
+        raise HTTPException(status_code=500, detail=message)
+    return {"success": True, "message": message}
+
+@api_router.post("/devices/{serial}/install-apk")
+async def install_apk(serial: str, apk_path: str):
+    """Install an APK on the device"""
+    success, message = await device_manager.install_apk(serial, apk_path)
+    if not success:
+        raise HTTPException(status_code=500, detail=message)
+    return {"success": True, "message": message}
+
+# ======================= BUILD HISTORY & FORK MANAGEMENT =======================
+
+@api_router.get("/builds/history")
+async def get_build_history(
+    build_type: Optional[str] = None,
+    device_codename: Optional[str] = None,
+    limit: int = 50
+):
+    """Get build history"""
+    builds = await build_history.get_builds_by_type(build_type, device_codename, limit)
+    return {"builds": builds, "count": len(builds)}
+
+@api_router.get("/builds/{build_id}")
+async def get_build_details(build_id: str):
+    """Get details of a specific build"""
+    build = await build_history.get_build(build_id)
+    if not build:
+        raise HTTPException(status_code=404, detail="Build not found")
+    return build
+
+@api_router.get("/builds/{build_type}/successful")
+async def get_successful_builds(
+    build_type: str,
+    device_codename: Optional[str] = None,
+    limit: int = 20
+):
+    """Get successful builds for forking"""
+    builds = await build_history.get_successful_builds(build_type, device_codename, limit)
+    return {"builds": builds, "count": len(builds)}
+
+class ForkBuildRequest(BaseModel):
+    modifications: Optional[Dict] = None
+
+@api_router.post("/builds/{build_id}/fork")
+async def fork_build(build_id: str, request: ForkBuildRequest):
+    """Fork an existing build"""
+    forked = await build_history.fork_build(build_id, request.modifications)
+    if not forked:
+        raise HTTPException(status_code=404, detail="Source build not found")
+    return forked
+
+@api_router.get("/builds/{build_id_1}/compare/{build_id_2}")
+async def compare_builds(build_id_1: str, build_id_2: str):
+    """Compare two builds"""
+    comparison = await build_history.compare_builds(build_id_1, build_id_2)
+    return comparison
+
+class SaveBuildRequest(BaseModel):
+    name: str
+    type: str
+    device_codename: Optional[str] = None
+    configuration: Dict
+    status: str = "pending"
+    description: Optional[str] = None
+
+@api_router.post("/builds/save")
+async def save_build(request: SaveBuildRequest):
+    """Save a new build to history"""
+    build_id = await build_history.save_build(request.dict())
+    return {"build_id": build_id, "message": "Build saved successfully"}
+
+class UpdateBuildStatusRequest(BaseModel):
+    status: str
+    additional_data: Optional[Dict] = None
+
+@api_router.patch("/builds/{build_id}/status")
+async def update_build_status(build_id: str, request: UpdateBuildStatusRequest):
+    """Update build status"""
+    success = await build_history.update_build_status(
+        build_id, request.status, request.additional_data
+    )
+    if not success:
+        raise HTTPException(status_code=404, detail="Build not found")
+    return {"success": True, "message": "Build status updated"}
+
+@api_router.delete("/builds/{build_id}")
+async def delete_build(build_id: str):
+    """Delete a build from history"""
+    success = await build_history.delete_build(build_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Build not found")
+    return {"success": True, "message": "Build deleted"}
+
+@api_router.get("/builds/search")
+async def search_builds(
+    query: str,
+    build_type: Optional[str] = None,
+    limit: int = 50
+):
+    """Search builds"""
+    builds = await build_history.search_builds(query, build_type, limit)
+    return {"builds": builds, "count": len(builds)}
+
+# ======================= BUILD TEMPLATES =======================
+
+class SaveTemplateRequest(BaseModel):
+    build_id: str
+    name: str
+    description: str
+    is_public: bool = False
+
+@api_router.post("/templates/save")
+async def save_build_template(request: SaveTemplateRequest):
+    """Save a build as a reusable template"""
+    template_id = await build_history.save_as_template(
+        request.build_id,
+        request.name,
+        request.description,
+        request.is_public
+    )
+    if not template_id:
+        raise HTTPException(status_code=404, detail="Source build not found")
+    return {"template_id": template_id, "message": "Template saved successfully"}
+
+@api_router.get("/templates")
+async def get_templates(
+    build_type: Optional[str] = None,
+    public_only: bool = False
+):
+    """Get available build templates"""
+    templates = await build_history.get_templates(build_type, public_only)
+    return {"templates": templates, "count": len(templates)}
+
+@api_router.post("/templates/{template_id}/use")
+async def use_template(template_id: str):
+    """Use a template for a new build"""
+    template = await build_history.use_template(template_id)
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    return template
+
+# ======================= BUILD STATISTICS =======================
+
+@api_router.get("/builds/stats")
+async def get_build_statistics(build_type: Optional[str] = None):
+    """Get build statistics"""
+    stats = await build_history.get_build_statistics(build_type)
+    return stats
+
+# ======================= BUILD PRESETS =======================
+
+@api_router.get("/presets/{tool_type}")
+async def get_build_presets(tool_type: str):
+    """Get presets for a specific tool type"""
+    presets = get_presets_for_tool(tool_type)
+    return {"tool_type": tool_type, "presets": presets}
+
+class ApplyPresetRequest(BaseModel):
+    preset_id: str
+    base_config: Optional[Dict] = None
+
+@api_router.post("/presets/{tool_type}/apply")
+async def apply_build_preset(tool_type: str, request: ApplyPresetRequest):
+    """Apply a preset to a configuration"""
+    config = apply_preset_to_project(request.preset_id, tool_type, request.base_config)
+    return {"configuration": config}
+
 # ======================= APP SETUP =======================
 
 # Add CORS
