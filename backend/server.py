@@ -24,7 +24,7 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # Import our new modules
-from binary_manager import binary_manager
+from binary_manager import binary_manager, BINARY_SOURCES
 from build_orchestrator import build_orchestrator
 
 # MongoDB connection
@@ -998,7 +998,7 @@ async def get_binary_path(binary_name: str):
     available, path = binary_manager.check_binary(binary_name)
     if available:
         return {"available": True, "path": path}
-    return {"available": False, "path": None, "can_install": binary_name in binary_manager.BINARY_SOURCES}
+    return {"available": False, "path": None, "can_install": binary_name in BINARY_SOURCES}
 
 # ======================= DEVICE ROUTES =======================
 

@@ -262,3 +262,6 @@ class BinaryManager:
 
 # Global instance
 binary_manager = BinaryManager()
+
+# Export BINARY_SOURCES for use in other modules
+__all__ = ['binary_manager', 'BINARY_SOURCES']
