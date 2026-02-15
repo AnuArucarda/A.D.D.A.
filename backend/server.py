@@ -33,6 +33,7 @@ from ai_provider_manager import ai_provider_manager
 from device_manager import device_manager
 from build_history_manager import BuildHistoryManager
 from factory_image_manager import factory_image_manager
+from github_integration import github_integration
 
 # MongoDB connection
 mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
@@ -3092,6 +3093,109 @@ async def extract_kernel_config(request: ExtractKernelConfigRequest):
             return {"error": "Failed to extract kernel config"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# ======================= GITHUB INTEGRATION =======================
+
+class GitHubTokenRequest(BaseModel):
+    user_id: str
+    github_token: str
+
+@api_router.post("/github/set-token")
+async def set_github_token(request: GitHubTokenRequest):
+    """Set GitHub personal access token for a user"""
+    github_integration.set_user_token(request.user_id, request.github_token)
+    return {"success": True, "message": "GitHub token configured"}
+
+class CreateRepoRequest(BaseModel):
+    user_id: str
+    repo_name: str
+    description: str
+    is_private: bool = False
+
+@api_router.post("/github/create-repo")
+async def create_github_repository(request: CreateRepoRequest):
+    """Create a new GitHub repository for storing recipes"""
+    result = await github_integration.create_repository(
+        request.user_id,
+        request.repo_name,
+        request.description,
+        request.is_private
+    )
+    return result
+
+class SaveRecipeToGitHubRequest(BaseModel):
+    user_id: str
+    repo_owner: str
+    repo_name: str
+    recipe_name: str
+    recipe_data: Dict[str, Any]
+    branch: str = "main"
+
+@api_router.post("/github/save-recipe")
+async def save_recipe_to_github(request: SaveRecipeToGitHubRequest):
+    """Save a build recipe to GitHub repository"""
+    result = await github_integration.save_recipe_to_github(
+        request.user_id,
+        request.repo_owner,
+        request.repo_name,
+        request.recipe_name,
+        request.recipe_data,
+        request.branch
+    )
+    return result
+
+@api_router.get("/github/load-recipe")
+async def load_recipe_from_github(github_url: str, user_id: Optional[str] = None):
+    """Load a build recipe from GitHub URL"""
+    recipe = await github_integration.load_recipe_from_github(github_url, user_id)
+    return recipe
+
+@api_router.get("/github/search-recipes")
+async def search_community_recipes(
+    query: str,
+    build_type: Optional[str] = None,
+    limit: int = 30
+):
+    """Search for community recipes on GitHub"""
+    recipes = await github_integration.search_community_recipes(query, build_type, limit)
+    return {"recipes": recipes, "count": len(recipes)}
+
+class ForkRepoRequest(BaseModel):
+    user_id: str
+    repo_owner: str
+    repo_name: str
+
+@api_router.post("/github/fork-repo")
+async def fork_recipe_repository(request: ForkRepoRequest):
+    """Fork a recipe repository to user's GitHub account"""
+    result = await github_integration.fork_recipe_repository(
+        request.user_id,
+        request.repo_owner,
+        request.repo_name
+    )
+    return result
+
+@api_router.get("/github/user-repos")
+async def get_user_repositories(user_id: str, recipe_repos_only: bool = True):
+    """Get user's GitHub repositories"""
+    repos = await github_integration.get_user_repositories(user_id, recipe_repos_only)
+    return {"repositories": repos, "count": len(repos)}
+
+@api_router.get("/github/list-recipes")
+async def list_recipes_in_repository(
+    repo_owner: str,
+    repo_name: str,
+    user_id: Optional[str] = None,
+    branch: str = "main"
+):
+    """List all recipes in a GitHub repository"""
+    recipes = await github_integration.list_recipes_in_repository(
+        repo_owner,
+        repo_name,
+        user_id,
+        branch
+    )
+    return {"recipes": recipes, "count": len(recipes)}
 
 # ======================= APP SETUP =======================
 
